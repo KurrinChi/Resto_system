@@ -1,0 +1,41 @@
+Purpose: A single-file, OOP-based user management system for a Restaurant Management System that runs entirely in the terminal via a menu-driven CLI, demonstrating all four pillars of OOP.
+
+Core entity: Users represent restaurant staff (Chef, Cashier, Waiter, Security Guard, Manager) with immutable user_id and controlled access to sensitive data like passwords and login attempts.
+
+User roles: Uses a Role enum (CHEF, CASHIER, WAITER, SECURITY_GUARD, MANAGER) to standardize and validate staff positions in the restaurant system.
+
+Employment states: Uses EmploymentStatus enum (ACTIVE, ON_LEAVE, SUSPENDED, TERMINATED) to track and manage staff employment lifecycle.
+
+Add/update: Add new users with validation (unique username, password requirements, valid email/phone) and update contact information through controlled setter methods.
+
+Authentication: Secure login system with password hashing, failed attempt tracking, and automatic suspension after 3 failed attempts to protect against unauthorized access.
+
+Status management: Change employment status via validated methods that enforce business rules (e.g., cannot modify terminated employees, status changes reset security counters).
+
+Archive workflow: Terminate moves users to archived status while preserving records; system maintains separate active and archived user collections for audit purposes.
+
+Password security: All passwords are hashed using SHA-256; plain text passwords are never stored; verification and changes go through secure private methods.
+
+User profiles: Provides safe UserProfile value objects that expose public data without revealing sensitive internal attributes like password hashes or security counters.
+
+Encapsulation: Private attributes (__password_hash, __login_attempts, __status, __users dict) hide internal state; all mutations occur through validated public methods with business rules enforced internally.
+
+Abstraction: Clear separation between public interface (add_user, authenticate, change_status) and private implementation details (password hashing, ID generation, validation helpers); users of the class don't need to know how data is stored or secured.
+
+Inheritance: User class serves as a base that can be extended; UserManagementSystem inherits standard Python object behavior and could be subclassed for specialized management strategies (e.g., VIPUserManagement, TemporaryStaffManagement).
+
+Polymorphism: Methods like change_status and authenticate can handle different user types uniformly; the system treats all Role types through the same interface despite their different responsibilities; property accessors provide uniform access patterns regardless of internal implementation.
+
+CLI interaction: Menu options let you add users, view by role/status, update information, manage passwords, change employment status, authenticate credentials, and view detailed profiles; all input is validated and errors are handled gracefully.
+
+Statistics and reporting: System provides aggregate data (total users by role, by status) without exposing internal data structures; read-only properties ensure data integrity.
+
+Validation rules: Prevent invalid operations (e.g., modifying terminated users, weak passwords, duplicate usernames) and enforce security policies (auto-suspension on failed logins, password complexity requirements).
+
+Security features: Password hashing, login attempt tracking with auto-suspension, protected sensitive data access, audit trail via last_login timestamps, and controlled credential management.
+
+Reflection output: On exit, prints comprehensive answers explaining how all four OOP pillars were applied and their importance in real-world restaurant management systems.
+
+Identification block: Prints the identification block in the exact format at the very end, matching the activity requirements with name, section, and system title.
+
+Single-file compliance: Everything lives in one .py file, runs without external frameworks beyond standard library, and fits the "only a working Python file" submission rule.
