@@ -1,0 +1,35 @@
+Purpose: A single-file, OOP-based reservation-style vacancy tracker for a Restaurant Management System that runs entirely in the terminal via a menu-driven CLI.​
+
+Core entity: Tables are immutable value objects with id, capacity, and area, keeping data consistent while operations are handled by tracker classes.​
+
+Availability states: Uses a Status enum (AVAILABLE, UNAVAILABLE, RESERVED, OCCUPIED) to standardize and validate the table lifecycle for reservation logic.​
+
+Add/delete: Add a new table with validation (unique id, positive capacity, non-empty area) and permanently delete an active table only when not RESERVED/OCCUPIED.​
+
+Set/view availability: Change availability via set_status or convenience actions (reserve, cancel, occupy, vacate, set_available) and list available tables by optional area filter.​
+
+Archive workflow: Archive removes a table from access while preserving a record; unarchive restores it (default UNAVAILABLE); purge_archived permanently deletes from the archive.​
+
+Suggestion engine: next_available proposes the smallest suitable AVAILABLE table meeting a minimum capacity and optional area, demonstrating a clear selection strategy.​
+
+VIP strategy: A VIPVacancyTableTracker subclass overrides next_available to prioritize VIP area and larger capacities first, then falls back to the base strategy.​
+
+Encapsulation: Internal state is private (active tables, per-table status, archive), mutated only through validated methods and guarded transitions (e.g., cannot archive OCCUPIED/RESERVED).​
+
+Abstraction: An abstract Tracker defines the reservation contract (add/delete, set_status, list, archive, suggest), decoupling callers from storage and policy details.​
+
+Inheritance: VacancyTableTracker implements the abstract contract; VIPVacancyTableTracker extends it to reuse behavior and change only the suggestion policy.​
+
+Polymorphism: Both trackers share the same interface; the CLI can swap implementations (base vs. VIP) without changing how the rest of the code calls them.​
+
+CLI interaction: Menu options let you add/delete, set/view availability, archive/unarchive/purge, and request suggestions; input is validated and errors are surfaced gracefully.​
+
+Counts and lists: The CLI shows active, archived, and available counts; provides views for available tables, tables by status, all active, and all archived.​
+
+Validation rules: Prevent invalid state transitions (e.g., OCCUPIED → RESERVED requires vacating first) and unsafe destructive actions (e.g., blocking delete/archive of RESERVED/OCCUPIED).​
+
+Reflection output: On exit, prints the required five answers explaining how the four OOP pillars were applied and why they matter in real-world development.​
+
+Identification block: Prints the identification block in the exact format at the very end, matching the activity requirements.​
+
+Single-file compliance: Everything lives in one .py file, runs without external frameworks, and fits the “only a working Python file” submission rule.​
