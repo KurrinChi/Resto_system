@@ -59,9 +59,10 @@ const PH_BOUNDS = L.latLngBounds(
 
 interface SearchBarProps {
   onSelectResult: (result: any) => void;
+  onNoResults?: () => void;
 }
 
-export const SearchBar: React.FC<SearchBarProps> = ({ onSelectResult }) => {
+export const SearchBar: React.FC<SearchBarProps> = ({ onSelectResult, onNoResults }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
@@ -79,6 +80,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSelectResult }) => {
       const response = await fetch(url);
       const data = await response.json();
       setSearchResults(data);
+      
+      // Trigger callback if no results found
+      if (data.length === 0 && onNoResults) {
+        onNoResults();
+      }
     } catch (error) {
       console.error('Search failed:', error);
       alert('Failed to search address. Please try again.');

@@ -5,6 +5,7 @@ import { ClientHeader } from './ClientHeader';
 import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
 import { Modal } from '../../common/Modal';
 import Map, { SearchBar } from '../embed/MapClean';
+import { Toast } from '../../common/Toast';
 import '../client.css';
 
 interface ClientLayoutProps {
@@ -13,6 +14,7 @@ interface ClientLayoutProps {
 
 export const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
   const [mapOpen, setMapOpen] = React.useState(false);
+  const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const mapRef = React.useRef<any>(null);
 
   const handleLocationSelect = () => {
@@ -25,6 +27,10 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
     if (mapRef.current) {
       mapRef.current.handleSelectSearchResult(result);
     }
+  };
+
+  const handleNoResults = () => {
+    setToastMessage('No results found. Please try a different search term.');
   };
 
   // Listen for openMapModal event from header or other components
@@ -52,7 +58,7 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
         onClose={() => setMapOpen(false)} 
         title="Select your location" 
         maxWidth="xl"
-        headerExtra={<SearchBar onSelectResult={handleSearchResult} />}
+        headerExtra={<SearchBar onSelectResult={handleSearchResult} onNoResults={handleNoResults} />}
       >
         <div className="space-y-4 overflow-visible">
           <div className="rounded-lg">
@@ -60,6 +66,14 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
           </div>
         </div>
       </Modal>
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <Toast
+          message={toastMessage}
+          onClose={() => setToastMessage(null)}
+        />
+      )}
     </div>
   );
 };

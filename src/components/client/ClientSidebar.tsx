@@ -1,6 +1,6 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { Home, Menu, ShoppingCart, User, Heart } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { Home, Menu, ShoppingCart, User, Heart, LogOut } from 'lucide-react';
 import { THEME } from '../../constants/theme';
 import { BRANDING } from '../../constants/branding';
 
@@ -14,6 +14,17 @@ const clientMenu = [
 
 export const ClientSidebar: React.FC = () => {
   const [isExpanded, setIsExpanded] = React.useState(true);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // Clear any stored user data
+    localStorage.removeItem('userAddress');
+    localStorage.removeItem('orderType');
+    localStorage.removeItem('rs_cart_v1');
+    
+    // Navigate to login or home page
+    navigate('/');
+  };
 
   return (
     <aside
@@ -57,6 +68,22 @@ export const ClientSidebar: React.FC = () => {
           </NavLink>
         ))}
       </nav>
+
+      {/* Logout Button */}
+      <div className="p-3 border-t" style={{ borderColor: THEME.colors.border.dark }}>
+        <button
+          onClick={handleLogout}
+          className={`w-full flex items-center gap-3 px-3 h-11 rounded-lg hover:bg-opacity-80 transition-all ${!isExpanded && 'justify-center'}`}
+          style={{
+            backgroundColor: 'transparent',
+            color: THEME.colors.text.secondary,
+          }}
+          title={!isExpanded ? 'Logout' : undefined}
+        >
+          <LogOut className="w-5 h-5 flex-shrink-0" />
+          {isExpanded && <span className="text-sm font-medium flex-1 truncate text-left" style={{ color: THEME.colors.text.primary }}>Logout</span>}
+        </button>
+      </div>
     </aside>
   );
 };

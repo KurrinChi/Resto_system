@@ -4,7 +4,7 @@ import { AdminLayout } from "./components/admin/layout/AdminLayout";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { initializeTheme } from "./constants/theme";
 // Client routes
-import { ClientLayout, Home as ClientHome, CartProvider, Menu, CartPage, Checkout, Login, Register, OrderHistory, OrderTracking, ProfileView, ProfileEdit, Favorites } from "./components/client";
+import { ClientLayout, Home as ClientHome, CartProvider, Menu, CartPage, Checkout, Login, Register, OrderHistory, OrderTracking, ProfileEdit, ProfilePage, Favorites } from "./components/client";
 
 // Import all admin pages
 import { Dashboard } from "./components/admin/dashboard/Dashboard.tsx";
@@ -59,7 +59,7 @@ function App() {
           <Route path="register" element={<Register />} />
           <Route path="orders" element={<OrderHistory />} />
           <Route path="track/:id" element={<OrderTracking />} />
-          <Route path="profile" element={<ProfileView />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="profile/edit" element={<ProfileEdit />} />
         </Route>
 

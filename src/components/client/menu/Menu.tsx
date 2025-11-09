@@ -1,10 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MenuItemCard } from './MenuItemCard';
 import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../common/Button';
-
-const PLACEHOLDER_IMG = new URL('../../../assets/placeholder.png', import.meta.url).href;
+import { useCart } from '../cart/CartContext';
+import { Toast } from '../../common/Toast';
 
 const sampleMenu = [
   { id: 1, name: 'Burger Deluxe', price: 8.99, desc: 'Juicy beef patty with cheese', category: 'Burgers', isBestSeller: true, isNewOffer: false },
@@ -19,24 +20,85 @@ const sampleMenu = [
 
 const categories = ['All', 'Burgers', 'Pizza', 'Salads', 'Pasta', 'Wraps'];
 
-type OrderItem = {
-  id: number | string;
-  name: string;
-  price: number;
-  quantity: number;
-};
-
 export const Menu: React.FC = () => {
+  const navigate = useNavigate();
+  const { addItem, items, updateQty, removeItem } = useCart();
   const [filter, setFilter] = React.useState('All');
-  const [priceRange, setPriceRange] = React.useState<[number, number]>([0, 20]);
+  const [priceRange, setPriceRange] = React.useState<[number, number]>([0, 1000]);
   const [showDiscounts, setShowDiscounts] = React.useState(false);
   const [showBestSellers, setShowBestSellers] = React.useState(false);
   const [showNewOffers, setShowNewOffers] = React.useState(false);
   const [orderType, setOrderType] = React.useState<'delivery' | 'pickup'>('delivery');
-  const [orderItems, setOrderItems] = React.useState<OrderItem[]>([]);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [toastMessage, setToastMessage] = React.useState<string | null>(null);
+  const [favorites, setFavorites] = React.useState<Set<number>>(new Set());
+
+  // Add keyframe animations on mount
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Smooth zoom effect */
+      .menu-card-hover-zoom {
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.4s cubic-bezier(0.25, 0.1, 0.25, 1),
+                    box-shadow 0.3s ease;
+        will-change: transform;
+      }
+
+      .menu-card-hover-zoom img {
+        transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        will-change: transform;
+      }
+
+      .menu-card-hover-zoom:hover {
+        transform: translateY(-6px);
+      }
+
+      .menu-card-hover-zoom:hover img {
+        transform: scale(1.08);
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
+  // Listen for search events from header
+  React.useEffect(() => {
+    const handleSearch = (event: Event) => {
+      const customEvent = event as CustomEvent<string>;
+      setSearchQuery(customEvent.detail);
+    };
+
+    window.addEventListener('searchQuery', handleSearch);
+    return () => window.removeEventListener('searchQuery', handleSearch);
+  }, []);
 
   // Filter items based on all criteria
   let filteredItems = filter === 'All' ? sampleMenu : sampleMenu.filter((m) => m.category === filter);
+  
+  // Apply search query filter (search in name, description, category)
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase();
+    filteredItems = filteredItems.filter(item => 
+      item.name.toLowerCase().includes(query) ||
+      item.desc.toLowerCase().includes(query) ||
+      item.category.toLowerCase().includes(query)
+    );
+  }
   
   // Apply price range filter
   filteredItems = filteredItems.filter(item => item.price >= priceRange[0] && item.price <= priceRange[1]);
@@ -49,30 +111,61 @@ export const Menu: React.FC = () => {
     filteredItems = filteredItems.filter(item => item.isNewOffer);
   }
 
-  const addToOrder = (item: { id: number | string; name: string; price: number }) => {
-    setOrderItems(prev => {
-      const existing = prev.find(i => i.id === item.id);
-      if (existing) {
-        return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+  const handleAddToCart = (item: { id: number | string; name: string; price: number; desc?: string; image?: string }) => {
+    addItem({
+      id: item.id,
+      name: item.name,
+      price: item.price
+    });
+    setToastMessage('Added to Cart Successfully');
+  };
+
+  const handleUpdateQuantity = (id: number | string, newQuantity: number) => {
+    if (newQuantity <= 0) {
+      removeItem(id);
+    } else {
+      updateQty(id, newQuantity);
+    }
+  };
+
+  const handleRemoveItem = (id: number | string) => {
+    removeItem(id);
+  };
+
+  const handleToggleFavorite = (itemId: number | string) => {
+    const id = typeof itemId === 'string' ? parseInt(itemId) : itemId;
+    setFavorites(prev => {
+      const newFavorites = new Set(prev);
+      if (newFavorites.has(id)) {
+        newFavorites.delete(id);
+        setToastMessage('Removed from Favorites');
+      } else {
+        newFavorites.add(id);
+        setToastMessage('Added to Favorites');
       }
-      return [...prev, { ...item, quantity: 1 }];
+      return newFavorites;
     });
   };
 
-  const updateQuantity = (id: number | string, delta: number) => {
-    setOrderItems(prev => {
-      const updated = prev.map(item => 
-        item.id === id ? { ...item, quantity: Math.max(0, item.quantity + delta) } : item
-      ).filter(item => item.quantity > 0);
-      return updated;
-    });
+  const handlePlaceOrder = () => {
+    if (items.length === 0) {
+      setToastMessage('Please add items to your cart');
+      return;
+    }
+    // Save order type to localStorage before navigating
+    localStorage.setItem('orderType', orderType);
+    navigate('/client/checkout');
   };
 
-  const removeItem = (id: number | string) => {
-    setOrderItems(prev => prev.filter(item => item.id !== id));
+  // Function to get count of items per category
+  const getCategoryCount = (category: string) => {
+    if (category === 'All') {
+      return sampleMenu.length;
+    }
+    return sampleMenu.filter(item => item.category === category).length;
   };
 
-  const subtotal = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const subtotal = items.reduce((sum: number, item) => sum + (item.price * item.qty), 0);
   const smallOrderFee = subtotal < 109 ? 20 : 0;
   const deliveryFee = orderType === 'delivery' ? 74 : 0;
   const serviceFee = subtotal * 0.05;
@@ -94,7 +187,7 @@ export const Menu: React.FC = () => {
               <input
                 type="range"
                 min="0"
-                max="20"
+                max="1000"
                 step="0.5"
                 value={priceRange[1]}
                 onChange={(e) => setPriceRange([0, parseFloat(e.target.value)])}
@@ -163,18 +256,61 @@ export const Menu: React.FC = () => {
                   color: THEME.colors.text.primary
                 }}
               >
-                {c}
+                {c} ({getCategoryCount(c)})
               </button>
             ))}
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto mt-6 pr-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredItems.map((item) => (
-              <MenuItemCard key={item.id} item={item} onAddToOrder={addToOrder} />
-            ))}
-          </div>
+          {filteredItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="rounded-full p-6 mb-6" style={{ backgroundColor: THEME.colors.background.tertiary }}>
+                <svg
+                  className="w-16 h-16"
+                  fill="none"
+                  stroke={THEME.colors.text.tertiary}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold mb-3" style={{ color: THEME.colors.text.primary }}>
+                No menu items found
+              </h3>
+              <p className="text-sm text-center max-w-md mb-6" style={{ color: THEME.colors.text.tertiary }}>
+                We couldn't find any items matching your search or filters. Try adjusting your criteria or clearing some filters.
+              </p>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setFilter('All');
+                  setPriceRange([0, 1000]);
+                  setShowDiscounts(false);
+                  setShowBestSellers(false);
+                  setShowNewOffers(false);
+                  window.dispatchEvent(new CustomEvent('searchQuery', { detail: '' }));
+                }}
+                style={{
+                  backgroundColor: THEME.colors.primary.DEFAULT,
+                  color: 'white'
+                }}
+              >
+                Clear all filters
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredItems.map((item, index) => (
+                <MenuItemCard key={item.id} item={item} onAddToOrder={handleAddToCart} index={index} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -213,12 +349,12 @@ export const Menu: React.FC = () => {
           {/* Order Items - Scrollable middle section */}
           <div className="flex-1 overflow-y-auto pr-2 mb-4 max-h-[300px] lg:max-h-none">
             <div className="space-y-3">
-              {orderItems.length === 0 ? (
+              {items.length === 0 ? (
                 <p className="text-sm text-center py-8" style={{ color: THEME.colors.text.tertiary }}>
                   No items in order
                 </p>
               ) : (
-                orderItems.map((item) => (
+                items.map((item) => (
                   <div
                     key={item.id}
                     className="flex items-center gap-2 p-2 rounded-lg"
@@ -235,24 +371,24 @@ export const Menu: React.FC = () => {
                     
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={() => updateQuantity(item.id, -1)}
+                        onClick={() => handleUpdateQuantity(item.id, item.qty - 1)}
                         className="p-0.5 rounded hover:bg-opacity-80"
                         style={{ backgroundColor: THEME.colors.background.hover }}
                       >
                         <Minus className="w-3 h-3" style={{ color: THEME.colors.text.primary }} />
                       </button>
                       <span className="text-xs font-medium w-5 text-center" style={{ color: THEME.colors.text.primary }}>
-                        {item.quantity}
+                        {item.qty}
                       </span>
                       <button
-                        onClick={() => updateQuantity(item.id, 1)}
+                        onClick={() => handleUpdateQuantity(item.id, item.qty + 1)}
                         className="p-0.5 rounded hover:bg-opacity-80"
                         style={{ backgroundColor: THEME.colors.background.hover }}
                       >
                         <Plus className="w-3 h-3" style={{ color: THEME.colors.text.primary }} />
                       </button>
                       <button
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => handleRemoveItem(item.id)}
                         className="p-0.5 rounded hover:bg-opacity-80 ml-0.5"
                         style={{ backgroundColor: THEME.colors.background.hover }}
                       >
@@ -266,7 +402,7 @@ export const Menu: React.FC = () => {
           </div>
 
           {/* Order Summary & Submit Button - Fixed at bottom */}
-          {orderItems.length > 0 && (
+          {items.length > 0 && (
             <div className="flex-shrink-0 border-t pt-4" style={{ borderColor: THEME.colors.border.DEFAULT }}>
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm">
@@ -307,6 +443,7 @@ export const Menu: React.FC = () => {
               <Button
                 variant="primary"
                 className="w-full"
+                onClick={handlePlaceOrder}
                 style={{
                   backgroundColor: THEME.colors.primary.DEFAULT,
                   color: 'white',
@@ -319,6 +456,14 @@ export const Menu: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <Toast
+          message={toastMessage}
+          onClose={() => setToastMessage(null)}
+        />
+      )}
     </div>
   );
 };

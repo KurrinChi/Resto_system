@@ -27,9 +27,10 @@ export const Card: React.FC<CardProps> = ({
   };
 
   const borderColor = style && (style.borderColor as string);
+  const hasCustomBg = style && style.backgroundColor;
 
   return (
-    <div style={style} className={`bg-[#1a1d29] rounded-3xl shadow-lg border border-gray-800 ${className}`}>
+    <div style={style} className={`${!hasCustomBg ? 'bg-[#1a1d29]' : ''} rounded-3xl shadow-lg border border-gray-800 ${className}`}>
       {(title || subtitle || headerAction) && (
         <div className="border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: borderColor || undefined }}>
           <div>
