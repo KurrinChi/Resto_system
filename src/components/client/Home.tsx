@@ -1,7 +1,8 @@
 import React from 'react';
-import { MapPin, ArrowRight, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, ArrowRight, Heart, ChevronLeft, ChevronRight, ShoppingCart } from 'lucide-react';
 // Load local image from src/assets in a Vite-safe way
 const MAPS_IMG = new URL('../../assets/mapsimg.png', import.meta.url).href;
+const PLACEHOLDER_IMG = new URL('../../assets/placeholder.png', import.meta.url).href;
 import { Card } from '../common/Card';
 import { Button } from '../common/Button';
 import { CLIENT_THEME as THEME } from '../../constants/clientTheme';
@@ -312,7 +313,15 @@ export const Home: React.FC = () => {
               }}
             >
               <div className="relative">
-                <img src={promo.image} alt={promo.name} className="w-full h-40 object-cover" />
+                <img 
+                  src={promo.image} 
+                  alt={promo.name} 
+                  className="w-full h-40 object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = PLACEHOLDER_IMG;
+                  }}
+                />
                 <div className="absolute top-2 right-2 px-2 py-1 rounded-lg text-xs font-semibold bg-red-600 text-white">
                   {promo.discount}% OFF
                 </div>
@@ -328,6 +337,9 @@ export const Home: React.FC = () => {
                     <span className="text-xl font-bold" style={{ color: '#fbbf24' }}>${promo.price}</span>
                     <span className="text-sm ml-2 line-through" style={{ color: '#808080' }}>${promo.originalPrice}</span>
                   </div>
+                  <Button variant="primary" className="text-xs px-3 py-1.5">
+                    <ShoppingCart className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
             </div>
@@ -357,7 +369,15 @@ export const Home: React.FC = () => {
               style={{ backgroundColor: THEME.colors.background.tertiary, borderColor: THEME.colors.border.DEFAULT }}
             >
               <div className="relative">
-                <img src={item.image} alt={item.name} className="w-full h-40 object-cover" />
+                <img 
+                  src={item.image} 
+                  alt={item.name} 
+                  className="w-full h-40 object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = PLACEHOLDER_IMG;
+                  }}
+                />
                 <button
                   onClick={() => toggleFavorite(item.id)}
                   className="absolute top-2 right-2 p-2 rounded-full transition-all"
@@ -401,7 +421,15 @@ export const Home: React.FC = () => {
               style={{ backgroundColor: THEME.colors.background.tertiary, borderColor: THEME.colors.border.DEFAULT }}
             >
               <div className="relative">
-                <img src={item.image} alt={item.name} className="w-full h-48 object-cover" />
+                <img 
+                  src={item.image} 
+                  alt={item.name} 
+                  className="w-full h-48 object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = PLACEHOLDER_IMG;
+                  }}
+                />
                 <button
                   onClick={() => toggleFavorite(item.id)}
                   className="absolute top-2 right-2 p-2 rounded-full transition-all"

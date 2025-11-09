@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 export const ClientHeader: React.FC = () => {
   const [search, setSearch] = React.useState('');
   const [address, setAddress] = React.useState('');
+  const [showAddressTooltip, setShowAddressTooltip] = React.useState(false);
   const navigate = useNavigate();
 
   // Load address from localStorage on mount
@@ -31,33 +32,48 @@ export const ClientHeader: React.FC = () => {
   return (
     <header className="h-16 sticky top-0 z-20 px-4" style={{ backgroundColor: THEME.colors.background.primary, borderBottom: `1px solid ${THEME.colors.border.dark}` }}>
       <div className="h-full flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3">
-            {BRANDING.logo.url ? (
-              <img src={BRANDING.logo.url} alt={BRANDING.logo.alt} className="h-8 w-auto" />
-            ) : (
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: THEME.colors.primary.DEFAULT }}>
-                  <span className="text-white font-bold">{BRANDING.logo.text.charAt(0)}</span>
+        {/* Left - Logo */}
+        <div className="flex items-center flex-shrink-0">
+          <img src="/logohorizontal.png" alt={BRANDING.logo.alt} className="h-8 w-auto" />
+        </div>
+
+        {/* Center - Address */}
+        <div className="flex-1 flex justify-center min-w-0">
+          <div 
+            className="flex items-center gap-2 cursor-pointer transition-colors group relative max-w-md min-w-0" 
+            onClick={() => window.dispatchEvent(new Event('openMapModal'))}
+            onMouseEnter={() => setShowAddressTooltip(true)}
+            onMouseLeave={() => setShowAddressTooltip(false)}
+          >
+            <MapPin className="w-4 h-4 flex-shrink-0 group-hover:text-red-600 transition-colors" style={{ color: THEME.colors.primary.DEFAULT }} />
+            <span className="text-xs truncate group-hover:text-red-600 transition-colors" style={{ color: THEME.colors.text.primary }}>
+              {address}
+            </span>
+            
+            {/* Tooltip */}
+            {showAddressTooltip && (
+              <div 
+                className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-3 rounded-lg shadow-lg z-50 min-w-[250px] max-w-[350px]"
+                style={{ 
+                  backgroundColor: THEME.colors.background.secondary,
+                  border: `1px solid ${THEME.colors.border.dark}`,
+                  color: THEME.colors.text.primary
+                }}
+              >
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: THEME.colors.primary.DEFAULT }} />
+                  <div>
+                    <p className="text-xs font-medium mb-1" style={{ color: THEME.colors.text.secondary }}>Delivery Address</p>
+                    <p className="text-sm break-words" style={{ color: THEME.colors.text.tertiary }}>{address}</p>
+                  </div>
                 </div>
-                <span className="font-semibold text-sm" style={{ color: THEME.colors.text.primary }}>{BRANDING.appName}</span>
               </div>
             )}
           </div>
         </div>
 
-          <div className="flex items-center gap-3">
-          {/* Address Display - Clickable to open map */}
-          <div 
-            className="hidden lg:flex items-center gap-2 cursor-pointer transition-colors group" 
-            style={{ maxWidth: '250px' }}
-            onClick={() => window.dispatchEvent(new Event('openMapModal'))}
-          >
-            <MapPin className="w-4 h-4 flex-shrink-0 group-hover:text-red-600 transition-colors" style={{ color: THEME.colors.primary.DEFAULT }} />
-            <span className="text-xs truncate group-hover:text-red-600 transition-colors" style={{ color: THEME.colors.text.primary }} title={address}>
-              {address}
-            </span>
-          </div>
+        {/* Right - Search, Cart, Avatar */}
+        <div className="flex items-center gap-3 flex-shrink-0">
 
           <div className="hidden md:flex items-center rounded-lg px-3 h-10 w-72 transition-all" style={{ backgroundColor: THEME.colors.background.tertiary, border: `1px solid ${THEME.colors.border.dark}` }}>
             <Search className="w-4 h-4" style={{ color: THEME.colors.text.tertiary }} />
