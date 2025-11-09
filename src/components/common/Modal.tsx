@@ -9,6 +9,7 @@ interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   maxWidth?: "sm" | "md" | "lg" | "xl";
+  headerExtra?: React.ReactNode; // Extra content in header (e.g., search bar)
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -18,6 +19,7 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   footer,
   maxWidth = "md",
+  headerExtra,
 }) => {
   useEffect(() => {
     if (isOpen) {
@@ -55,43 +57,50 @@ export const Modal: React.FC<ModalProps> = ({
       <div className="flex min-h-full items-center justify-center p-4">
         {/* Modal Content */}
         <div
-          className={`relative w-full ${maxWidthClasses[maxWidth]} rounded-2xl shadow-2xl transform transition-all z-10`}
+          className={`relative w-full ${maxWidthClasses[maxWidth]} rounded-2xl shadow-2xl transform transition-all z-10 overflow-visible`}
           style={{
             backgroundColor: THEME.colors.background.secondary,
-            borderWidth: "1px",
-            borderColor: THEME.colors.border.DEFAULT,
           }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div
-            className="flex items-center justify-between p-6 border-b"
+            className="p-6 border-b overflow-visible"
             style={{ borderColor: THEME.colors.border.DEFAULT }}
           >
-            <h3
-              className="text-xl font-semibold"
-              style={{ color: THEME.colors.text.primary }}
-            >
-              {title}
-            </h3>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg transition-all"
-              style={{ color: THEME.colors.text.tertiary }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  THEME.colors.background.hover;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = "transparent";
-              }}
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <h3
+                  className="text-xl font-semibold"
+                  style={{ color: THEME.colors.text.primary }}
+                >
+                  {title}
+                </h3>
+                {headerExtra && (
+                  <div className="flex-1 min-w-[260px] max-w-[460px] relative z-[100]">
+                    {headerExtra}
+                  </div>
+                )}
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-lg transition-all"
+                  style={{ color: THEME.colors.text.tertiary }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      THEME.colors.background.hover;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Body */}
-          <div className="p-6">{children}</div>
+          <div className="p-6 overflow-visible">{children}</div>
 
           {/* Footer */}
           {footer && (

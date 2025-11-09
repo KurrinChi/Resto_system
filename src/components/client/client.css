@@ -1,0 +1,15 @@
+/* Client area - slightly smaller typography overrides
+   These rules target common Tailwind text size utilities inside the .client-area
+   wrapper so the admin/theme sizes remain unchanged.
+*/
+.client-area .text-3xl { font-size: 1.5rem !important; }   /* was 1.875rem */
+.client-area .text-2xl { font-size: 1.25rem !important; }  /* was 1.5rem */
+.client-area .text-xl  { font-size: 1.125rem !important; } /* was 1.25rem */
+.client-area .text-lg  { font-size: 0.9375rem !important; }/* was 1.125rem */
+.client-area .text-base{ font-size: 0.875rem !important; } /* was 1rem */
+.client-area .text-sm  { font-size: 0.75rem !important; }   /* keep small texts */
+
+/* Slightly reduce heading sizes that might not use Tailwind utilities */
+.client-area h1 { font-size: 2rem !important; }
+.client-area h2 { font-size: 1.5rem !important; }
+.client-area h3 { font-size: 1.125rem !important; }

@@ -6,7 +6,6 @@ import {
   TrendingUp,
   Clock,
   CheckCircle,
-  Calendar,
   Star,
   Package,
 } from "lucide-react";

@@ -34,18 +34,18 @@ interface CategorySales {
 export const ReportsAnalytics: React.FC = () => {
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [reportType, setReportType] = useState("sales");
-  const [loading, setLoading] = useState(false);
+  // loading state removed for demo/static data
 
-  const [stats, setStats] = useState<AnalyticsStats>({
+  const stats: AnalyticsStats = {
     totalRevenue: 45678.9,
     totalOrders: 1234,
     totalCustomers: 567,
     averageOrder: 37.02,
     revenueGrowth: 12.5,
     orderGrowth: 8.3,
-  });
+  };
 
-  const [revenueData, setRevenueData] = useState([
+  const revenueData = [
     { date: "Oct 17", revenue: 4200 },
     { date: "Oct 18", revenue: 3800 },
     { date: "Oct 19", revenue: 5100 },
@@ -53,25 +53,25 @@ export const ReportsAnalytics: React.FC = () => {
     { date: "Oct 21", revenue: 5400 },
     { date: "Oct 22", revenue: 6200 },
     { date: "Oct 23", revenue: 5800 },
-  ]);
+  ];
 
-  const [ordersStatusData, setOrdersStatusData] = useState([
+  const ordersStatusData = [
     { name: "Pending", value: 120 },
     { name: "Preparing", value: 280 },
     { name: "Ready", value: 180 },
     { name: "Delivered", value: 520 },
     { name: "Cancelled", value: 45 },
-  ]);
+  ];
 
-  const [topItemsData, setTopItemsData] = useState([
+  const topItemsData = [
     { name: "Classic Burger", sales: 245 },
     { name: "Margherita Pizza", sales: 189 },
     { name: "Grilled Salmon", sales: 167 },
     { name: "Caesar Salad", sales: 134 },
     { name: "Pasta Carbonara", sales: 98 },
-  ]);
+  ];
 
-  const [customerGrowthData, setCustomerGrowthData] = useState([
+  const customerGrowthData = [
     { month: "Apr", customers: 320 },
     { month: "May", customers: 380 },
     { month: "Jun", customers: 420 },
@@ -79,20 +79,19 @@ export const ReportsAnalytics: React.FC = () => {
     { month: "Aug", customers: 490 },
     { month: "Sep", customers: 530 },
     { month: "Oct", customers: 567 },
-  ]);
+  ];
 
-  const [categorySales, setCategorySales] = useState<CategorySales[]>([
+  const categorySales: CategorySales[] = [
     { category: "Burgers", orders: 345, revenue: 4481.55, growth: 15.3 },
     { category: "Pizza", orders: 289, revenue: 4332.11, growth: 12.8 },
     { category: "Pasta", orders: 201, revenue: 2811.99, growth: 8.2 },
-  ]);
+  ];
 
   useEffect(() => {
     fetchAnalyticsData();
   }, [dateRange, reportType]);
 
   const fetchAnalyticsData = async () => {
-    setLoading(true);
     try {
       // TODO: Replace with actual API calls
       // const response = await fetch(`/api/analytics?start=${dateRange.start}&end=${dateRange.end}&type=${reportType}`);
@@ -107,8 +106,6 @@ export const ReportsAnalytics: React.FC = () => {
       await new Promise((resolve) => setTimeout(resolve, 500));
     } catch (error) {
       console.error("Error fetching analytics:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
