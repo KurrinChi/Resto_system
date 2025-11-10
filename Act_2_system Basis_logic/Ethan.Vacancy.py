@@ -318,7 +318,7 @@ def run_cli() -> None:
 
     # Choose strategy: base or VIP
     use_vip = False
-    choice = input("Use VIP suggestion strategy? [y/N]: ").strip().lower()
+    choice = input("Use VIP suggestion strategy? [Y/N]: ").strip().lower()
     use_vip = choice == "y"
     tracker: VacancyTableTracker = VIPVacancyTableTracker() if use_vip else VacancyTableTracker()
 
