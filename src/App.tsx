@@ -41,6 +41,10 @@ function App() {
           <Route path="profile" element={<Profile />} />
         </Route>
 
+        {/* Auth Routes - Outside of any layout */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
         {/* Client Routes - basic storefront */}
         <Route
           path="/client"
@@ -55,8 +59,6 @@ function App() {
           <Route path="favorites" element={<Favorites />} />
           <Route path="cart" element={<CartPage />} />
           <Route path="checkout" element={<Checkout />} />
-          <Route path="login" element={<Login />} />
-          <Route path="register" element={<Register />} />
           <Route path="orders" element={<OrderHistory />} />
           <Route path="track/:id" element={<OrderTracking />} />
           <Route path="profile" element={<ProfilePage />} />
