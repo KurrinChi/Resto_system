@@ -1,0 +1,49 @@
+Purpose: A single-file, OOP-based order placement and management system for a Restaurant Management System that runs entirely in the terminal via a menu-driven CLI, demonstrating all four pillars of OOP.
+
+Core entity: Orders represent customer orders with items, pricing, and status tracking. Menu items are immutable value objects while orders have controlled lifecycle management.
+
+Order types: Uses OrderType enum (DINE_IN, TAKEOUT, DELIVERY) to standardize service types with different fees and handling requirements.
+
+Order status: Uses OrderStatus enum (PENDING, CONFIRMED, PREPARING, READY, SERVED, COMPLETED, CANCELLED) to track the complete order lifecycle with validated transitions.
+
+Priority levels: Uses Priority enum (LOW, NORMAL, HIGH, URGENT) to manage order urgency affecting estimated preparation times.
+
+Menu management: Add menu items with name, price, and category; list items with optional category filtering; retrieve items by ID for order placement.
+
+Order creation: Create orders with customer name, type, optional table number (required for dine-in), and priority level with full validation.
+
+Order items: Add/remove menu items to orders with quantity and special instructions; modifications only allowed in PENDING/CONFIRMED status to prevent mid-preparation changes.
+
+Status workflow: Update order status through validated transitions (e.g., PENDING → CONFIRMED → PREPARING → READY → SERVED → COMPLETED); prevents invalid state changes.
+
+Pricing system: Calculate totals including subtotal, service fees (type-specific), 12% tax, and discounts; all pricing logic is encapsulated and protected.
+
+Payment tracking: Mark orders as paid with validation; prevents payment of cancelled/empty orders; tracks payment status privately.
+
+Order lifecycle: Complete orders (move to archive), cancel orders (with reason tracking), and maintain separate active/completed collections for reporting.
+
+Service differentiation: Different order types have different service descriptions, estimated times, and additional fees (dine-in=₱0, takeout=₱5, delivery=₱25).
+
+Priority impact: Priority level affects estimated preparation time with multipliers (URGENT=0.5x, HIGH=0.8x, NORMAL=1.0x, LOW=1.5x base time).
+
+Encapsulation: Private attributes (__items, __status, __payment_status, __discount, __active_orders, __completed_orders) hide internal state; all mutations occur through validated public methods with business rules enforced internally (e.g., cannot add items to preparing orders, cannot cancel paid orders).
+
+Abstraction: Clear separation between public interface (create_order, add_item, calculate_total) and private implementation details (subtotal calculation, status validation, ID generation); users interact with simple methods while complex pricing, validation, and lifecycle logic remains hidden inside classes.
+
+Inheritance: Order class inherits from BaseOrder parent class which provides common functionality like get_service_type(), get_estimated_time(), and get_additional_fees() that all order types share; establishes "is-a" relationship enabling code reuse and clear hierarchy.
+
+Polymorphism: Order class overrides BaseOrder methods to provide type-specific and priority-specific behavior; same method names (get_estimated_time, get_additional_fees, get_service_type) produce different results based on order type (DINE_IN vs DELIVERY) and priority (URGENT vs NORMAL) while maintaining consistent interface.
+
+CLI interaction: Menu-driven interface allows menu management (add items, view menu), order creation and item addition, status updates, priority changes, discount application, payment marking, order completion/cancellation, and various list views; all input validated with graceful error handling.
+
+Statistics and reporting: System provides aggregate data (total orders by type, by status, menu items) without exposing internal data structures; read-only properties ensure data integrity.
+
+Validation rules: Prevent invalid operations (adding items to preparing orders, cancelling paid orders, invalid status transitions, negative discounts, excessive discounts) and enforce business rules (table number required for dine-in, payment required before completion).
+
+Order summary: Provides safe OrderSummary value objects exposing public data without revealing sensitive internal attributes or allowing direct modification of order state.
+
+Reflection output: On exit, prints comprehensive answers explaining how all four OOP pillars (Encapsulation, Abstraction, Inheritance, Polymorphism) were applied and their importance in real-world restaurant order management systems.
+
+Identification block: Prints the identification block with pair names in the exact format at the very end, matching the activity requirements with name, section, and system title.
+
+Single-file compliance: Everything lives in one .py file, runs without external frameworks beyond standard library, and fits the "only a working Python file" submission rule.

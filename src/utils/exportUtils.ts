@@ -53,8 +53,7 @@ export const exportReportToCSV = (
   categorySales: any[],
   reportType: string,
   dateRange: { start: string; end: string }
-) => {
-  const timestamp = new Date().toISOString().split("T")[0];
+ ) => {
 
   // Create summary sheet
   const summary = [

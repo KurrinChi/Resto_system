@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { AdminLayout } from "./components/admin/layout/AdminLayout";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { initializeTheme } from "./constants/theme";
+// Client routes
+import { ClientLayout, Home as ClientHome, CartProvider, Menu, CartPage, Checkout, Login, Register, OrderHistory, OrderTracking, ProfileEdit, ProfilePage, Favorites } from "./components/client";
 
 // Import all admin pages
 import { Dashboard } from "./components/admin/dashboard/Dashboard.tsx";
@@ -37,6 +39,28 @@ function App() {
           <Route path="reports" element={<ReportsAnalytics />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="profile" element={<Profile />} />
+        </Route>
+
+        {/* Client Routes - basic storefront */}
+        <Route
+          path="/client"
+          element={
+            <CartProvider>
+              <ClientLayout />
+            </CartProvider>
+          }
+        >
+          <Route index element={<ClientHome />} />
+          <Route path="menu" element={<Menu />} />
+          <Route path="favorites" element={<Favorites />} />
+          <Route path="cart" element={<CartPage />} />
+          <Route path="checkout" element={<Checkout />} />
+          <Route path="login" element={<Login />} />
+          <Route path="register" element={<Register />} />
+          <Route path="orders" element={<OrderHistory />} />
+          <Route path="track/:id" element={<OrderTracking />} />
+          <Route path="profile" element={<ProfilePage />} />
+          <Route path="profile/edit" element={<ProfileEdit />} />
         </Route>
 
         {/* 404 Not Found */}

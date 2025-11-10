@@ -11,7 +11,7 @@ export const AdminLayout: React.FC = () => {
   return (
     <div
       className="flex h-screen w-screen overflow-hidden"
-      style={{ backgroundColor: THEME.colors.background.dark }}
+      style={{ backgroundColor: THEME.colors.background.primary }}
     >
       {/* Sidebar */}
       <Sidebar />

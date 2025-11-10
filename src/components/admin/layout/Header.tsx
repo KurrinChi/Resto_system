@@ -1,5 +1,5 @@
 import React from "react";
-import { Menu, Bell, Search } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { useAdmin } from "../../../contexts/AdminContext";
 import { THEME } from "../../../constants/theme";

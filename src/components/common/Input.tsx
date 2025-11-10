@@ -36,6 +36,7 @@ export const Input: React.FC<InputProps> = ({
             ${error ? 'border-red-500' : 'border-gray-300'}
             ${className}
           `}
+          style={props.style}
           {...props}
         />
       </div>
