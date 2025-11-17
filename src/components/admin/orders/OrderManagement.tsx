@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Download } from "lucide-react";
 import { Button } from "../../common/Button";
 import { SearchBar } from "../../common/SearchBar";
+import { Modal } from "../../common/Modal";
 import { OrderTable } from "./OrderTable.tsx";
 import { OrderModal } from "./OrderModal.tsx";
 import { THEME } from "../../../constants/theme";
@@ -90,6 +91,8 @@ export const OrderManagement: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPayment, setFilterPayment] = useState<string>("all");
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
@@ -105,6 +108,34 @@ export const OrderManagement: React.FC = () => {
         order.id === orderId ? { ...order, status: newStatus } : order
       )
     );
+  };
+
+  const handleCancelOrder = (orderId: string) => {
+    setOrderToCancel(orderId);
+    setIsCancelConfirmOpen(true);
+  };
+
+  const handleConfirmCancel = () => {
+    if (orderToCancel) {
+      setOrders(
+        orders.map((order) =>
+          order.id === orderToCancel
+            ? {
+                ...order,
+                status: "cancelled",
+                paymentStatus: order.paymentStatus === "paid" ? "refunded" : order.paymentStatus,
+              }
+            : order
+        )
+      );
+      setIsCancelConfirmOpen(false);
+      setOrderToCancel(null);
+    }
+  };
+
+  const handleCancelConfirm = () => {
+    setIsCancelConfirmOpen(false);
+    setOrderToCancel(null);
   };
 
   const handleExportOrders = () => {
@@ -320,6 +351,7 @@ export const OrderManagement: React.FC = () => {
           orders={filteredOrders}
           onView={handleViewOrder}
           onUpdateStatus={handleUpdateOrderStatus}
+          onCancelOrder={handleCancelOrder}
         />
       </div>
 
@@ -329,6 +361,47 @@ export const OrderManagement: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         order={selectedOrder}
       />
+
+      {/* Cancel Order Confirmation Modal */}
+      <Modal
+        isOpen={isCancelConfirmOpen}
+        onClose={handleCancelConfirm}
+        title="Cancel Order"
+        maxWidth="sm"
+        footer={
+          <div className="flex items-center gap-3 justify-end">
+            <Button
+              onClick={handleCancelConfirm}
+              variant="secondary"
+            >
+              Keep Order
+            </Button>
+            <Button
+              onClick={handleConfirmCancel}
+              variant="danger"
+            >
+              Cancel Order
+            </Button>
+          </div>
+        }
+      >
+        <div className="p-6">
+          <p style={{ color: THEME.colors.text.primary }} className="mb-4">
+            Are you sure you want to cancel this order?
+          </p>
+          <p style={{ color: THEME.colors.text.secondary }} className="text-sm">
+            {orderToCancel && orders.find((o) => o.id === orderToCancel)?.orderNumber && (
+              <>
+                Order <strong>{orders.find((o) => o.id === orderToCancel)?.orderNumber}</strong> will be cancelled
+                {orders.find((o) => o.id === orderToCancel)?.paymentStatus === "paid" && (
+                  <> and refunded</>
+                )}
+                .
+              </>
+            )}
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 };

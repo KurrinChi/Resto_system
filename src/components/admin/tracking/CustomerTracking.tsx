@@ -176,32 +176,7 @@ export const CustomerTracking: React.FC = () => {
         </div>
       </div>
 
-      {/* Map View */}
-      <div
-        className="rounded-2xl border overflow-hidden flex-shrink-0"
-        style={{
-          backgroundColor: THEME.colors.background.secondary,
-          borderColor: THEME.colors.border.DEFAULT,
-        }}
-      >
-        <div
-          className="px-6 py-4 border-b"
-          style={{ borderColor: THEME.colors.border.DEFAULT }}
-        >
-          <h3
-            className="text-lg font-semibold"
-            style={{ color: THEME.colors.text.primary }}
-          >
-            Delivery Map
-          </h3>
-        </div>
-        <div className="p-4">
-          <TrackingMap
-            selectedTracking={selectedTracking}
-            trackingData={trackingData}
-          />
-        </div>
-      </div>
+    
 
       {/* Filters and Search */}
       <div

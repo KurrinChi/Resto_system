@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eye, ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { Order } from "../../../types";
 import { Badge } from "../../common/Badge";
 import { Dropdown } from "../../common/Dropdown";
@@ -9,6 +9,7 @@ interface OrderTableProps {
   orders: Order[];
   onView: (order: Order) => void;
   onUpdateStatus: (orderId: string, status: Order["status"]) => void;
+  onCancelOrder?: (orderId: string) => void;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -17,6 +18,7 @@ export const OrderTable: React.FC<OrderTableProps> = ({
   orders,
   onView,
   onUpdateStatus,
+  onCancelOrder,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -245,30 +247,60 @@ export const OrderTable: React.FC<OrderTableProps> = ({
                   })}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                  <button
-                    onClick={() => onView(order)}
-                    className="p-2 rounded-lg transition-all border inline-flex items-center gap-2"
-                    style={{
-                      color: THEME.colors.text.secondary,
-                      backgroundColor: "transparent",
-                      borderColor: THEME.colors.border.DEFAULT,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor =
-                        "rgba(59, 130, 246, 0.1)";
-                      e.currentTarget.style.color = "#3b82f6";
-                      e.currentTarget.style.borderColor = "#3b82f6";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                      e.currentTarget.style.color = THEME.colors.text.secondary;
-                      e.currentTarget.style.borderColor =
-                        THEME.colors.border.DEFAULT;
-                    }}
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span className="text-sm">View</span>
-                  </button>
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => onView(order)}
+                      className="p-2 rounded-lg transition-all border inline-flex items-center gap-2"
+                      style={{
+                        color: THEME.colors.text.secondary,
+                        backgroundColor: "transparent",
+                        borderColor: THEME.colors.border.DEFAULT,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor =
+                          "rgba(59, 130, 246, 0.1)";
+                        e.currentTarget.style.color = "#3b82f6";
+                        e.currentTarget.style.borderColor = "#3b82f6";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color = THEME.colors.text.secondary;
+                        e.currentTarget.style.borderColor =
+                          THEME.colors.border.DEFAULT;
+                      }}
+                      title="View Order"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span className="text-sm">View</span>
+                    </button>
+                    {order.status !== "cancelled" && order.status !== "delivered" && (
+                      <button
+                        onClick={() => onCancelOrder?.(order.id)}
+                        className="p-2 rounded-lg transition-all border inline-flex items-center gap-2"
+                        style={{
+                          color: THEME.colors.text.secondary,
+                          backgroundColor: "transparent",
+                          borderColor: THEME.colors.border.DEFAULT,
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor =
+                            "rgba(239, 68, 68, 0.1)";
+                          e.currentTarget.style.color = "#ef4444";
+                          e.currentTarget.style.borderColor = "#ef4444";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "transparent";
+                          e.currentTarget.style.color = THEME.colors.text.secondary;
+                          e.currentTarget.style.borderColor =
+                            THEME.colors.border.DEFAULT;
+                        }}
+                        title="Cancel Order"
+                      >
+                        <X className="w-4 h-4" />
+                        <span className="text-sm">Cancel</span>
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
