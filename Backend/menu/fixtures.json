@@ -1,0 +1,17 @@
+[
+  {
+    "model": "menu.category",
+    "pk": 1,
+    "fields": {"name": "Burgers"}
+  },
+  {
+    "model": "menu.menuitem",
+    "pk": 1,
+    "fields": {"category": 1, "name": "Classic Burger", "description": "A classic beef burger.", "active": true}
+  },
+  {
+    "model": "menu.itemvariation",
+    "pk": 1,
+    "fields": {"item": 1, "label": "Regular", "price": "8.99", "sku": "BURGER-REG", "available": true}
+  }
+]
