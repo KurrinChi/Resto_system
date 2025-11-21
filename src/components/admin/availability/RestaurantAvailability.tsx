@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Save, Clock, ToggleLeft, ToggleRight } from "lucide-react";
 import { Button } from "../../common/Button";
 import { Badge } from "../../common/Badge";
-import { AvailabilitySchedule } from "./AvailabilitySchedule.tsx";
+import { AvailabilitySchedule } from "./AvailabilitySchedule";
 import { THEME } from "../../../constants/theme";
 import type { RestaurantAvailability as RestaurantAvailabilityType } from "../../../types";
 

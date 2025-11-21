@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { MapPin, Navigation } from "lucide-react";
 import { SearchBar } from "../../common/SearchBar";
-import { TrackingTable } from "./TrackingTable.tsx";
-import { TrackingMap } from "./TrackingMap.tsx";
+import { TrackingTable } from "./TrackingTable";
+import { TrackingMap } from "./TrackingMap";
 import { THEME } from "../../../constants/theme";
 import type { CustomerTracking as CustomerTrackingType } from "../../../types";
 import { ordersApi } from "../../../services/apiservice";

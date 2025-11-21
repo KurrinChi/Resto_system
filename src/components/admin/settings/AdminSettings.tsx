@@ -8,9 +8,9 @@ import {
   Mail,
   RotateCcw,
 } from "lucide-react";
-import { Button } from "../../common/Button.tsx";
-import { Input } from "../../common/Input.tsx";
-import { SettingsForm } from "./SettingsForm.tsx";
+import { Button } from "../../common/Button";
+import { Input } from "../../common/Input";
+import { SettingsForm } from "./SettingsForm";
 import { useTheme } from "../../../contexts/ThemeContext";
 import {
   getThemeMode,

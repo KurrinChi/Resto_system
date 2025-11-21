@@ -11,14 +11,14 @@ import {
 } from 'lucide-react';
 
 // Import page components
-import { Dashboard } from '../components/admin/dashboard/Dashboard.tsx';
-import { UserManagement } from '../components/admin/users/UserManagement.tsx';
-import { MenuItemManagement } from '../components/admin/menu/MenuItemManagement.tsx';
-import { OrderManagement } from '../components/admin/orders/OrderManagement.tsx';
-import { CustomerTracking } from '../components/admin/tracking/CustomerTracking.tsx';
-import { RestaurantAvailability } from '../components/admin/availability/RestaurantAvailability.tsx';
-import { ReportsAnalytics } from '../components/admin/reports/ReportsAnalytics.tsx';
-import { AdminSettings } from '../components/admin/settings/AdminSettings.tsx';
+import { Dashboard } from '../components/admin/dashboard/Dashboard';
+import { UserManagement } from '../components/admin/users/UserManagement';
+import { MenuItemManagement } from '../components/admin/menu/MenuItemManagement';
+import { OrderManagement } from '../components/admin/orders/OrderManagement';
+import { CustomerTracking } from '../components/admin/tracking/CustomerTracking';
+import { RestaurantAvailability } from '../components/admin/availability/RestaurantAvailability';
+import { ReportsAnalytics } from '../components/admin/reports/ReportsAnalytics';
+import { AdminSettings } from '../components/admin/settings/AdminSettings';
 
 export interface RouteConfig {
   path: string;

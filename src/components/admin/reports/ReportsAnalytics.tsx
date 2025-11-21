@@ -7,11 +7,11 @@ import {
   Users,
 } from "lucide-react";
 import { Button } from "../../common/Button";
-import { ReportFilters } from "./ReportFilters.tsx";
-import { RevenueChart } from "./charts/RevenueChart.tsx";
-import { OrdersDonutChart } from "./charts/OrdersDonutChart.tsx";
-import { TopItemsChart } from "./charts/TopItemsChart.tsx";
-import { CustomerGrowthChart } from "./charts/CustomerGrowthChart.tsx";
+import { ReportFilters } from "./ReportFilters";
+import { RevenueChart } from "./charts/RevenueChart";
+import { OrdersDonutChart } from "./charts/OrdersDonutChart";
+import { TopItemsChart } from "./charts/TopItemsChart";
+import { CustomerGrowthChart } from "./charts/CustomerGrowthChart";
 import { exportSingleSheetReport } from "../../../utils/exportUtils";
 import { THEME } from "../../../constants/theme";
 import { reportsApi, dashboardApi } from "../../../services/apiservice";

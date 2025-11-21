@@ -107,7 +107,7 @@ TEMPLATES = [
 
 FIREBASE_SERVICE_ACCOUNT = BASE_DIR / 'firebase-credentials.json'
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR.parent / 'frontend/dist']
+STATICFILES_DIRS = [BASE_DIR.parent / 'dist']
 STATIC_ROOT = BASE_DIR.parent / 'staticfiles'
 
 # django-vite
@@ -117,7 +117,7 @@ DJANGO_VITE = {
         "dev_server_protocol": "http",
         "dev_server_host": "127.0.0.1",
         "dev_server_port": 5173,
-        "manifest_path": BASE_DIR.parent / 'frontend/dist' / 'manifest.json',
+        "manifest_path": BASE_DIR.parent / 'dist' / 'manifest.json',
         "static_url_prefix": "dist",
     }
 }

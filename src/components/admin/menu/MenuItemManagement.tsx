@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
-import { Button } from "../../common/Button.tsx";
-import { SearchBar } from "../../common/SearchBar.tsx";
-import { MenuItemTable } from "./MenuItemTable.tsx";
-import { MenuItemModal } from "./MenuItemModal.tsx";
+import { Button } from "../../common/Button";
+import { SearchBar } from "../../common/SearchBar";
+import { MenuItemTable } from "./MenuItemTable";
+import { MenuItemModal } from "./MenuItemModal";
 import { THEME } from "../../../constants/theme";
-import type { MenuItem } from "../../../types/index.ts";
+import type { MenuItem } from "../../../types";
 import { menuApi } from "../../../services/apiservice";
 
 export const MenuItemManagement: React.FC = () => {
