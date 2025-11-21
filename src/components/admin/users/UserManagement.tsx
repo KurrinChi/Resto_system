@@ -78,37 +78,39 @@ export const UserManagement: React.FC = () => {
 
   const handleSaveUser = async (user: User) => {
     try {
-      // Transform data to match Firebase schema
+      // Transform data to match backend schema
       const userData = {
-        username: user.email.split('@')[0],
-        full_name: user.name,
+        fullName: user.name,
+        name: user.name,
         email: user.email,
-        role: user.role.toUpperCase(),
+        role: user.role,
+        phoneNumber: user.phone || '',
         phone: user.phone || '',
-        status: user.status.toUpperCase()
+        status: user.status,
+        avatar: user.avatar || ''
       };
 
       if (selectedUser) {
         // Edit existing user
         const response = await usersApi.update(user.id, userData);
         if (response.success) {
-          setUsers(users.map((u) => (u.id === user.id ? user : u)));
+          await fetchUsers(); // Reload users to get updated data
         }
       } else {
         // Add new user (needs password for creation)
         const newUserData = {
           ...userData,
-          password: 'defaultPassword123' // Should prompt for password in modal
+          password: 'temp123' // Default password, user should change it
         };
         const response = await usersApi.create(newUserData);
         if (response.success) {
-          const newUser = { ...user, id: response.data.id };
-          setUsers([...users, newUser]);
+          await fetchUsers(); // Reload users to get new data
         }
       }
       setIsModalOpen(false);
     } catch (err: any) {
-      alert('Error saving user: ' + err.message);
+      console.error('Error saving user:', err);
+      alert('Error saving user: ' + (err.response?.data?.error || err.message));
     }
   };
 

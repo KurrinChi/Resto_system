@@ -7,7 +7,7 @@ import { initializeTheme } from "./constants/theme";
 import { ClientLayout, Home as ClientHome, CartProvider, Menu, CartPage, Checkout, OrderHistory, OrderTracking, ProfileEdit, ProfilePage } from "./components/client";
 import { Login, Register } from "./components/auth";
 
-// Import all admin pages
+// Import all admin pages - Updated Nov 22
 import { Dashboard } from "./components/admin/dashboard/Dashboard";
 import { UserManagement } from "./components/admin/users/UserManagement";
 import { MenuItemManagement } from "./components/admin/menu/MenuItemManagement";

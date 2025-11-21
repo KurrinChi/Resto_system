@@ -219,13 +219,13 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                       className="px-4 py-3 text-sm"
                       style={{ color: THEME.colors.text.primary }}
                     >
-                      ₱{(item.price || 0).toFixed(2)}
+                      ${(item.price || 0).toFixed(2)}
                     </td>
                     <td
                       className="px-4 py-3 text-sm text-right"
                       style={{ color: THEME.colors.text.primary }}
                     >
-                      ₱{((item.quantity || 1) * (item.price || 0)).toFixed(2)}
+                      ${((item.quantity || 1) * (item.price || 0)).toFixed(2)}
                     </td>
                   </tr>
                 )) : (
@@ -251,7 +251,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                     className="px-4 py-3 text-right font-bold text-lg"
                     style={{ color: THEME.colors.text.primary }}
                   >
-                    ₱{total.toFixed(2)}
+                    ${total.toFixed(2)}
                   </td>
                 </tr>
               </tfoot>

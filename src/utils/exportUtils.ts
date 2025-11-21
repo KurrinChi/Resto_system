@@ -155,7 +155,7 @@ export const exportSingleSheetReport = (
   csvContent += "REVENUE TREND\n";
   csvContent += "Date,Revenue\n";
   revenueData.forEach((item) => {
-    csvContent += `${item.date},$${item.revenue.toFixed(2)}\n`;
+    csvContent += `"${item.date}",$${item.revenue.toFixed(2)}\n`;
   });
   csvContent += "\n";
 
@@ -163,7 +163,7 @@ export const exportSingleSheetReport = (
   csvContent += "ORDERS BY STATUS\n";
   csvContent += "Status,Count\n";
   ordersStatusData.forEach((item) => {
-    csvContent += `${item.name},${item.value}\n`;
+    csvContent += `"${item.name}",${item.value}\n`;
   });
   csvContent += "\n";
 
@@ -171,7 +171,7 @@ export const exportSingleSheetReport = (
   csvContent += "TOP SELLING ITEMS\n";
   csvContent += "Item,Sales\n";
   topItemsData.forEach((item) => {
-    csvContent += `${item.name},${item.sales}\n`;
+    csvContent += `"${item.name}",${item.sales}\n`;
   });
   csvContent += "\n";
 
@@ -179,7 +179,7 @@ export const exportSingleSheetReport = (
   csvContent += "CUSTOMER GROWTH\n";
   csvContent += "Month,Customers\n";
   customerGrowthData.forEach((item) => {
-    csvContent += `${item.month},${item.customers}\n`;
+    csvContent += `"${item.month}",${item.customers}\n`;
   });
   csvContent += "\n";
 
@@ -187,7 +187,7 @@ export const exportSingleSheetReport = (
   csvContent += "SALES BY CATEGORY\n";
   csvContent += "Category,Orders,Revenue,Growth\n";
   categorySales.forEach((item) => {
-    csvContent += `${item.category},${item.orders},$${item.revenue.toFixed(
+    csvContent += `"${item.category}",${item.orders},$${item.revenue.toFixed(
       2
     )},${item.growth}%\n`;
   });

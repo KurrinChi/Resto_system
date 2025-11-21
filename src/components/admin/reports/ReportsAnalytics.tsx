@@ -73,7 +73,7 @@ export const ReportsAnalytics: React.FC = () => {
       console.log('Revenue Trend Response:', revenueTrendResponse);
       console.log('Category Sales Response:', categorySalesResponse);
 
-      if (dashboardResponse.success) {
+      if (dashboardResponse.success && dashboardResponse.data) {
         const data = dashboardResponse.data;
         
         // Update stats
@@ -88,7 +88,7 @@ export const ReportsAnalytics: React.FC = () => {
 
         // Set orders status data - filter out zero values
         const statusData = [
-          { name: "Received", value: data.pending_orders || 0 },
+          { name: "Pending", value: data.pending_orders || 0 },
           { name: "Preparing", value: data.preparing_orders || 0 },
           { name: "Ready", value: data.ready_orders || 0 },
           { name: "Completed", value: data.completed_orders || 0 },
@@ -133,9 +133,22 @@ export const ReportsAnalytics: React.FC = () => {
         setCategorySales([]);
       }
       
-      setLoading(false);
     } catch (err: any) {
       console.error('Error fetching analytics data:', err);
+      // Set empty data instead of leaving state undefined
+      setStats({
+        totalRevenue: 0,
+        totalOrders: 0,
+        totalCustomers: 0,
+        averageOrder: 0,
+        revenueGrowth: 0,
+        orderGrowth: 0,
+      });
+      setOrdersStatusData([]);
+      setTopItemsData([]);
+      setRevenueData([]);
+      setCategorySales([]);
+    } finally {
       setLoading(false);
     }
   };
@@ -161,6 +174,17 @@ export const ReportsAnalytics: React.FC = () => {
       alert("Error exporting report. Please try again.");
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p style={{ color: THEME.colors.text.secondary }}>Loading analytics data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 h-full overflow-y-auto pb-6">

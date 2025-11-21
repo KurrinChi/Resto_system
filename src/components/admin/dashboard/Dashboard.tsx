@@ -10,12 +10,14 @@ import {
   Package,
 } from "lucide-react";
 import { THEME } from "../../../constants/theme";
-import { dashboardApi } from "../../../services/apiservice";
+import { dashboardApi, ordersApi, reportsApi } from "../../../services/apiservice";
 
 export const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [topItems, setTopItems] = useState<any[]>([]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -24,25 +26,46 @@ export const Dashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await dashboardApi.getStats();
-      if (response.success) {
-        setStats(response.data);
+      const [statsResponse, ordersResponse, topItemsResponse] = await Promise.all([
+        dashboardApi.getStats(),
+        ordersApi.getOrders(),
+        reportsApi.getPopularItems({ limit: 5 })
+      ]);
+      
+      console.log('Dashboard Stats Response:', statsResponse);
+      console.log('Orders Response:', ordersResponse);
+      console.log('Top Items Response:', topItemsResponse);
+      
+      if (statsResponse.success) {
+        console.log('Setting stats:', statsResponse.data);
+        setStats(statsResponse.data);
+      }
+      
+      if (ordersResponse.success && ordersResponse.data) {
+        // Get 5 most recent orders
+        const recent = ordersResponse.data.slice(0, 5);
+        setRecentOrders(recent);
+      }
+      
+      if (topItemsResponse.success && topItemsResponse.data) {
+        setTopItems(topItemsResponse.data.slice(0, 5));
       }
     } catch (err: any) {
       console.error('Error fetching dashboard data:', err);
       setError(err.message || 'Failed to load dashboard data');
-      // Use mock data as fallback
       setStats({
-        total_users: 567,
-        total_orders: 1234,
-        total_menu_items: 48,
-        total_revenue: 68575.00,
-        today_orders: 45,
-        today_revenue: 2340.50,
-        pending_orders: 12,
-        active_customers: 567,
-        avg_order_value: 55.57
+        total_users: 0,
+        total_orders: 0,
+        total_menu_items: 0,
+        total_revenue: 0,
+        today_orders: 0,
+        today_revenue: 0,
+        pending_orders: 0,
+        active_customers: 0,
+        avg_order_value: 0
       });
+      setRecentOrders([]);
+      setTopItems([]);
     } finally {
       setLoading(false);
     }
@@ -99,7 +122,7 @@ export const Dashboard: React.FC = () => {
 
         {/* Metrics Pills */}
         <div className="flex flex-wrap gap-3 mb-6">
-          {/* Paid */}
+          {/* Completed */}
           <div
             className="flex items-center gap-2 px-4 py-2 rounded-full"
             style={{ backgroundColor: "rgba(16, 185, 129, 0.2)" }}
@@ -109,37 +132,37 @@ export const Dashboard: React.FC = () => {
               className="text-sm font-medium"
               style={{ color: THEME.colors.text.primary }}
             >
-              $25,000
+              {stats?.completed_orders || 0}
             </span>
             <span
               className="text-xs"
               style={{ color: THEME.colors.text.tertiary }}
             >
-              Paid
+              Completed
             </span>
           </div>
 
-          {/* Credits */}
+          {/* Preparing */}
           <div
             className="flex items-center gap-2 px-4 py-2 rounded-full"
             style={{ backgroundColor: "rgba(245, 158, 11, 0.2)" }}
           >
-            <DollarSign className="w-4 h-4" style={{ color: "#f59e0b" }} />
+            <Clock className="w-4 h-4" style={{ color: "#f59e0b" }} />
             <span
               className="text-sm font-medium"
               style={{ color: THEME.colors.text.primary }}
             >
-              $10,000
+              {stats?.preparing_orders || 0}
             </span>
             <span
               className="text-xs"
               style={{ color: THEME.colors.text.tertiary }}
             >
-              Pending
+              Preparing
             </span>
           </div>
 
-          {/* Balance */}
+          {/* Pending */}
           <div
             className="flex items-center gap-2 px-4 py-2 rounded-full border-2 border-dashed"
             style={{
@@ -151,13 +174,13 @@ export const Dashboard: React.FC = () => {
               className="text-sm font-medium"
               style={{ color: THEME.colors.text.primary }}
             >
-              $38,575
+              {stats?.pending_orders || 0}
             </span>
             <span
               className="text-xs"
               style={{ color: THEME.colors.text.tertiary }}
             >
-              Processing
+              Pending
             </span>
           </div>
         </div>
@@ -166,41 +189,44 @@ export const Dashboard: React.FC = () => {
         <div className="flex flex-wrap gap-6 text-sm">
           <div>
             <span style={{ color: THEME.colors.text.tertiary }}>
-              Restaurant:{" "}
+              Total Orders:{" "}
             </span>
             <span
               style={{ color: THEME.colors.text.primary }}
               className="font-medium"
             >
-              Restaurant Hub
+              {stats?.total_orders || 0}
             </span>
           </div>
           <div>
-            <span style={{ color: THEME.colors.text.tertiary }}>Period: </span>
+            <span style={{ color: THEME.colors.text.tertiary }}>Today: </span>
             <span
               style={{ color: THEME.colors.text.primary }}
               className="font-medium"
             >
-              October 2025
-            </span>
-          </div>
-          <div>
-            <span style={{ color: THEME.colors.text.tertiary }}>
-              Growth Rate:{" "}
-            </span>
-            <span style={{ color: "#10b981" }} className="font-medium">
-              +18.5%
+              {stats?.today_orders || 0} orders (${(stats?.today_revenue || 0).toFixed(2)})
             </span>
           </div>
           <div>
             <span style={{ color: THEME.colors.text.tertiary }}>
-              Days Active:{" "}
+              Menu Items:{" "}
             </span>
             <span
               style={{ color: THEME.colors.text.primary }}
               className="font-medium"
             >
-              22 Days
+              {stats?.total_menu_items || 0}
+            </span>
+          </div>
+          <div>
+            <span style={{ color: THEME.colors.text.tertiary }}>
+              Total Users:{" "}
+            </span>
+            <span
+              style={{ color: THEME.colors.text.primary }}
+              className="font-medium"
+            >
+              {stats?.total_users || 0}
             </span>
           </div>
         </div>
@@ -370,54 +396,45 @@ export const Dashboard: React.FC = () => {
             Recent Activity
           </h3>
           <div className="space-y-4">
-            {[
-              {
-                time: "2 min ago",
-                action: "New order #4891 received",
-                color: "#10b981",
-              },
-              {
-                time: "15 min ago",
-                action: "Payment completed for order #4889",
-                color: "#3b82f6",
-              },
-              {
-                time: "1 hour ago",
-                action: 'Menu item "Burger Deluxe" updated',
-                color: "#f59e0b",
-              },
-              {
-                time: "3 hours ago",
-                action: "New customer registered",
-                color: "#8b5cf6",
-              },
-              {
-                time: "5 hours ago",
-                action: "Order #4887 delivered successfully",
-                color: "#10b981",
-              },
-            ].map((activity, index) => (
-              <div key={index} className="flex items-center gap-4">
-                <div
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: activity.color }}
-                />
-                <div className="flex-1">
-                  <p
-                    className="text-sm"
-                    style={{ color: THEME.colors.text.primary }}
-                  >
-                    {activity.action}
-                  </p>
-                  <p
-                    className="text-xs"
-                    style={{ color: THEME.colors.text.tertiary }}
-                  >
-                    {activity.time}
-                  </p>
+            {recentOrders.length > 0 ? recentOrders.map((order: any, index: number) => {
+              const statusColors: any = {
+                pending: "#f59e0b",
+                confirmed: "#3b82f6",
+                preparing: "#8b5cf6",
+                ready: "#10b981",
+                delivering: "#06b6d4",
+                completed: "#10b981",
+                cancelled: "#ef4444"
+              };
+              const color = statusColors[order.orderStatus] || "#6b7280";
+              
+              return (
+                <div key={index} className="flex items-center gap-4">
+                  <div
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: color }}
+                  />
+                  <div className="flex-1">
+                    <p
+                      className="text-sm"
+                      style={{ color: THEME.colors.text.primary }}
+                    >
+                      Order {order.id} - {order.fullName} (${parseFloat(order.totalFee || 0).toFixed(2)})
+                    </p>
+                    <p
+                      className="text-xs"
+                      style={{ color: THEME.colors.text.tertiary }}
+                    >
+                      {order.orderStatus} • {order.orderType}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            }) : (
+              <p className="text-sm" style={{ color: THEME.colors.text.tertiary }}>
+                No recent orders
+              </p>
+            )}
           </div>
         </div>
 
@@ -436,13 +453,7 @@ export const Dashboard: React.FC = () => {
             Top Selling Items
           </h3>
           <div className="space-y-4">
-            {[
-              { name: "Burger Deluxe", orders: 234, revenue: "$3,510" },
-              { name: "Classic Pizza", orders: 189, revenue: "$2,835" },
-              { name: "Caesar Salad", orders: 156, revenue: "$1,872" },
-              { name: "Grilled Chicken", orders: 142, revenue: "$2,130" },
-              { name: "Pasta Carbonara", orders: 128, revenue: "$1,920" },
-            ].map((item, index) => (
+            {topItems.length > 0 ? topItems.map((item: any, index: number) => (
               <div
                 key={index}
                 className="flex items-center justify-between p-3 rounded-xl"
@@ -484,7 +495,7 @@ export const Dashboard: React.FC = () => {
                       className="text-xs"
                       style={{ color: THEME.colors.text.tertiary }}
                     >
-                      {item.orders} orders
+                      {item.count} orders
                     </p>
                   </div>
                 </div>
@@ -492,10 +503,14 @@ export const Dashboard: React.FC = () => {
                   className="text-sm font-bold"
                   style={{ color: THEME.colors.text.primary }}
                 >
-                  {item.revenue}
+                  ${(item.revenue || 0).toFixed(2)}
                 </p>
               </div>
-            ))}
+            )) : (
+              <p className="text-sm" style={{ color: THEME.colors.text.tertiary }}>
+                No sales data available
+              </p>
+            )}
           </div>
         </div>
       </div>
