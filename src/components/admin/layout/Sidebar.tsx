@@ -314,6 +314,77 @@ export const Sidebar: React.FC = () => {
             </div>
           )}
 
+          {/* Dropdown Menu - Shows above profile for collapsed state too */}
+          {showProfileMenu && !isExpanded && (
+            <div
+              className="absolute bottom-full left-3 right-3 mb-2 rounded-lg border overflow-hidden"
+              style={{
+                backgroundColor: THEME.colors.background.secondary,
+                borderColor: THEME.colors.border.DEFAULT,
+                width: '240px',
+              }}
+            >
+              <NavLink
+                to="/admin/profile"
+                onClick={() => setShowProfileMenu(false)}
+                className="flex items-center gap-3 px-4 py-3 transition-colors"
+                style={{ color: THEME.colors.text.primary }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    THEME.colors.background.hover;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+              >
+                <User className="w-4 h-4" />
+                <span className="text-sm">My Profile</span>
+              </NavLink>
+
+              <NavLink
+                to="/admin/settings"
+                onClick={() => setShowProfileMenu(false)}
+                className="flex items-center gap-3 px-4 py-3 transition-colors"
+                style={{ color: THEME.colors.text.primary }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    THEME.colors.background.hover;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+              >
+                <Settings className="w-4 h-4" />
+                <span className="text-sm">Settings</span>
+              </NavLink>
+
+              <div
+                style={{
+                  borderTop: `1px solid ${THEME.colors.border.DEFAULT}`,
+                }}
+              >
+                <button
+                  onClick={() => {
+                    setShowProfileMenu(false);
+                    console.log("Logout");
+                  }}
+                  className="flex items-center gap-3 px-4 py-3 w-full transition-colors"
+                  style={{ color: THEME.colors.status.error }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      THEME.colors.background.hover;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="text-sm">Logout</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {isExpanded ? (
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -337,6 +408,7 @@ export const Sidebar: React.FC = () => {
               }}
             >
               <Avatar
+                key={adminUser?.avatar || adminUser?.name}
                 src={adminUser?.avatar}
                 name={adminUser?.name}
                 size="sm"
@@ -390,6 +462,7 @@ export const Sidebar: React.FC = () => {
                 {" "}
                 {/* Fixed container */}
                 <Avatar
+                  key={adminUser?.avatar || adminUser?.name}
                   src={adminUser?.avatar}
                   name={adminUser?.name}
                   size="sm"
@@ -637,7 +710,12 @@ export const Sidebar: React.FC = () => {
               }
             }}
           >
-            <Avatar src={adminUser?.avatar} name={adminUser?.name} size="sm" />
+            <Avatar 
+              key={adminUser?.avatar || adminUser?.name}
+              src={adminUser?.avatar} 
+              name={adminUser?.name} 
+              size="sm" 
+            />
             <div className="flex-1 min-w-0 text-left">
               <p
                 className="text-sm font-medium truncate"

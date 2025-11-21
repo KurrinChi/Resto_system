@@ -34,12 +34,12 @@ export const OrderManagement: React.FC = () => {
           id: order.id,
           orderNumber: order.id || `ORD-${order.id.slice(0, 8)}`,
           customerId: order.userId || order.guestInfo?.email || '',
-          customerName: order.guestInfo?.name || order.userId || 'Guest',
+          customerName: order.customerName || order.guestInfo?.name || order.userId || 'Guest',
           items: order.orderList?.map((item: any) => ({
             menuItemId: item.menuId,
             name: item.menuName,
-            quantity: item.quantity,
-            price: item.unitPrice,
+            quantity: item.quantity || 1,
+            price: item.price || item.unitPrice || 0,
             specialInstructions: item.notes
           })) || [],
           status: order.orderStatus || 'pending',

@@ -17,11 +17,14 @@ export const OrderModal: React.FC<OrderModalProps> = ({
 }) => {
   if (!order) return null;
 
+  console.log('Order Modal Data:', order);
+
   const getStatusVariant = (
     status: string
   ): "success" | "warning" | "error" | "info" => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case "delivered":
+      case "completed":
         return "success";
       case "ready":
         return "info";
@@ -34,11 +37,27 @@ export const OrderModal: React.FC<OrderModalProps> = ({
     }
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleString();
+    } catch {
+      return dateString;
+    }
+  };
+
+  const items = order.items || [];
+  const total = order.total || 0;
+  const orderNumber = order.orderNumber || order.id || 'N/A';
+  const customerName = order.customerName || 'Guest';
+  const status = order.status || 'pending';
+  const paymentStatus = order.paymentStatus || 'pending';
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Order Details - ${order.orderNumber}`}
+      title={`Order Details - ${orderNumber}`}
       maxWidth="lg"
     >
       <div className="space-y-6">
@@ -51,8 +70,8 @@ export const OrderModal: React.FC<OrderModalProps> = ({
             >
               Order Status
             </p>
-            <Badge variant={getStatusVariant(order.status)} size="lg">
-              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+            <Badge variant={getStatusVariant(status)} size="lg">
+              {status.charAt(0).toUpperCase() + status.slice(1)}
             </Badge>
           </div>
           <div className="flex-1">
@@ -63,11 +82,11 @@ export const OrderModal: React.FC<OrderModalProps> = ({
               Payment Status
             </p>
             <Badge
-              variant={order.paymentStatus === "paid" ? "success" : "warning"}
+              variant={paymentStatus === "paid" ? "success" : "warning"}
               size="lg"
             >
-              {order.paymentStatus.charAt(0).toUpperCase() +
-                order.paymentStatus.slice(1)}
+              {paymentStatus.charAt(0).toUpperCase() +
+                paymentStatus.slice(1)}
             </Badge>
           </div>
         </div>
@@ -94,7 +113,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                 className="font-medium"
                 style={{ color: THEME.colors.text.primary }}
               >
-                {order.customerName}
+                {customerName}
               </span>
             </div>
             <div className="flex justify-between">
@@ -105,7 +124,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                 className="font-medium"
                 style={{ color: THEME.colors.text.primary }}
               >
-                {new Date(order.orderDate).toLocaleString()}
+                {formatDate(order.orderDate)}
               </span>
             </div>
             {order.deliveryAddress && (
@@ -174,7 +193,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                 className="divide-y"
                 style={{ borderColor: THEME.colors.border.DEFAULT }}
               >
-                {order.items.map((item, index) => (
+                {items.length > 0 ? items.map((item, index) => (
                   <tr
                     key={index}
                     style={{
@@ -188,28 +207,34 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                       className="px-4 py-3 text-sm"
                       style={{ color: THEME.colors.text.primary }}
                     >
-                      {item.name}
+                      {item.name || 'Unknown Item'}
                     </td>
                     <td
                       className="px-4 py-3 text-sm"
                       style={{ color: THEME.colors.text.primary }}
                     >
-                      {item.quantity}
+                      {item.quantity || 1}
                     </td>
                     <td
                       className="px-4 py-3 text-sm"
                       style={{ color: THEME.colors.text.primary }}
                     >
-                      ${item.price.toFixed(2)}
+                      ₱{(item.price || 0).toFixed(2)}
                     </td>
                     <td
                       className="px-4 py-3 text-sm text-right"
                       style={{ color: THEME.colors.text.primary }}
                     >
-                      ${(item.quantity * item.price).toFixed(2)}
+                      ₱{((item.quantity || 1) * (item.price || 0)).toFixed(2)}
                     </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-3 text-sm text-center" style={{ color: THEME.colors.text.tertiary }}>
+                      No items found
+                    </td>
+                  </tr>
+                )}
               </tbody>
               <tfoot
                 style={{ backgroundColor: THEME.colors.background.tertiary }}
@@ -226,7 +251,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({
                     className="px-4 py-3 text-right font-bold text-lg"
                     style={{ color: THEME.colors.text.primary }}
                   >
-                    ${order.total.toFixed(2)}
+                    ₱{total.toFixed(2)}
                   </td>
                 </tr>
               </tfoot>

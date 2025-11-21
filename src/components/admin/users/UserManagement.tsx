@@ -25,22 +25,29 @@ export const UserManagement: React.FC = () => {
     try {
       setLoading(true);
       const response = await usersApi.getAll();
+      console.log('Users API Response:', response);
+      
       if (response.success) {
         // Transform Firebase data to match User interface
-        const usersData = response.data.map((user: any) => ({
-          id: user.id,
-          name: user.full_name || user.username,
-          email: user.email,
-          role: user.role?.toLowerCase() || 'customer',
-          status: user.status?.toLowerCase() || 'active',
-          phone: user.phone || '',
-          dateJoined: user.created_at || new Date().toISOString().split('T')[0],
-          avatar: user.avatar_url || ''
-        }));
+        const usersData = response.data.map((user: any) => {
+          console.log('User data:', user);
+          return {
+            id: user.id,
+            name: user.fullName || user.full_name || user.username || user.email?.split('@')[0] || 'Unknown',
+            email: user.email || '',
+            role: (user.role || 'customer').toLowerCase(),
+            status: (user.status || 'active').toLowerCase(),
+            phone: user.phoneNumber || user.phone || '',
+            dateJoined: user.createdAt || user.created_at || new Date().toISOString().split('T')[0],
+            avatar: user.avatar || user.avatar_url || ''
+          };
+        });
+        console.log('Transformed users:', usersData);
         setUsers(usersData);
       }
     } catch (err: any) {
       console.error('Error fetching users:', err);
+      alert('Error loading users: ' + err.message);
     } finally {
       setLoading(false);
     }

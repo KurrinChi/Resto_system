@@ -14,8 +14,10 @@ import { Input } from "../../common/Input";
 import { THEME } from "../../../constants/theme";
 import { Avatar } from "../../common/Avatar";
 import { profileApi } from "../../../services/apiservice";
+import { useAdmin } from "../../../contexts/AdminContext";
 
 export const Profile: React.FC = () => {
+  const { refreshProfile } = useAdmin();
   const [loading, setLoading] = useState(true);
   const [profileId, setProfileId] = useState("");
   const [name, setName] = useState("");
@@ -79,7 +81,8 @@ export const Profile: React.FC = () => {
       if (response.success) {
         alert("Profile updated successfully!");
         setHasChanges(false);
-        loadProfile(); // Reload to get updated data
+        await loadProfile(); // Reload to get updated data
+        await refreshProfile(); // Update context for Sidebar/Header
       } else {
         alert("Failed to update profile: " + (response.error || "Unknown error"));
       }
