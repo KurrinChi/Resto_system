@@ -11,6 +11,8 @@ import { Button } from '../../common/Button';
 export const ClientHeader: React.FC = () => {
   const [search, setSearch] = React.useState('');
   const [address, setAddress] = React.useState('');
+  const [userName, setUserName] = React.useState('Guest');
+  const [userAvatar, setUserAvatar] = React.useState<string | undefined>(undefined);
   const [showAddressTooltip, setShowAddressTooltip] = React.useState(false);
   const [showCartPanel, setShowCartPanel] = React.useState(false);
   const [orderType, setOrderType] = React.useState<'delivery' | 'pickup'>(() => {
@@ -55,16 +57,22 @@ export const ClientHeader: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           setAddress(data.address || 'Select delivery address');
-          // update session/local user object with fresh address
-          const updated = { ...currentUser, address: data.address };
+          setUserName(data.fullName || currentUser.fullName || 'Guest');
+          setUserAvatar(data.avatar || currentUser.avatar || undefined);
+          // update session/local user object with fresh data
+          const updated = { ...currentUser, address: data.address, fullName: data.fullName, avatar: data.avatar };
           sessionStorage.setItem('rs_current_user', JSON.stringify(updated));
           localStorage.setItem('rs_current_user', JSON.stringify(updated));
         } else {
           // fallback to existing stored address
           setAddress(currentUser.address || 'Select delivery address');
+          setUserName(currentUser.fullName || 'Guest');
+          setUserAvatar(currentUser.avatar || undefined);
         }
       } catch {
         setAddress('Select delivery address');
+        setUserName('Guest');
+        setUserAvatar(undefined);
       }
     };
     loadFromDB();
@@ -81,10 +89,12 @@ export const ClientHeader: React.FC = () => {
         const res = await fetch(`http://localhost:8000/api/auth/user/${currentUser.id}/`);
         if (res.ok) {
           const data = await res.json();
-            setAddress(data.address || 'Select delivery address');
-            const updated = { ...currentUser, address: data.address };
-            sessionStorage.setItem('rs_current_user', JSON.stringify(updated));
-            localStorage.setItem('rs_current_user', JSON.stringify(updated));
+          setAddress(data.address || 'Select delivery address');
+          setUserName(data.fullName || currentUser.fullName || 'Guest');
+          setUserAvatar(data.avatar || currentUser.avatar || undefined);
+          const updated = { ...currentUser, address: data.address, fullName: data.fullName, avatar: data.avatar };
+          sessionStorage.setItem('rs_current_user', JSON.stringify(updated));
+          localStorage.setItem('rs_current_user', JSON.stringify(updated));
         }
       } catch {/* ignore */}
     };
@@ -175,7 +185,7 @@ export const ClientHeader: React.FC = () => {
           {!shouldHideCart && <CartIndicator onClick={() => setShowCartPanel(true)} />}
 
           <div className="hidden sm:flex items-center gap-2">
-            <Avatar size="sm" name="Guest" />
+            <Avatar size="sm" name={userName} src={userAvatar} />
           </div>
         </div>
       </div>
