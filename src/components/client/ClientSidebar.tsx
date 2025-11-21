@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Menu, ShoppingCart, User, Heart, LogOut } from 'lucide-react';
+import { Home, Menu, ShoppingCart, User, LogOut } from 'lucide-react';
 import { THEME } from '../../constants/theme';
 import { BRANDING } from '../../constants/branding';
 
@@ -8,7 +8,6 @@ const clientMenu = [
   { path: '/client', label: 'Home', icon: <Home className="w-5 h-5" /> },
   { path: '/client/menu', label: 'Menu', icon: <Menu className="w-5 h-5" /> },
   { path: '/client/orders', label: 'Orders', icon: <ShoppingCart className="w-5 h-5" /> },
-  { path: '/client/favorites', label: 'Favorites', icon: <Heart className="w-5 h-5" /> },
   { path: '/client/profile', label: 'Profile', icon: <User className="w-5 h-5" /> },
 ];
 

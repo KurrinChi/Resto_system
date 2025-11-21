@@ -15,4 +15,3 @@ export { OrderHistory } from './orders/OrderHistory';
 export { ProfileView } from './profile/ProfileView';
 export { ProfileEdit } from './profile/ProfileEdit';
 export { ProfilePage } from './profile/ProfilePage';
-export { Favorites } from './favorites/Favorites';

@@ -21,7 +21,7 @@ export const ClientHeader: React.FC = () => {
   const { items, updateQty, removeItem, total, count } = useCart();
 
   // Visibility rules
-  const hideSearchOnPages = ['/client/favorites', '/client/profile', '/client/orders', '/client/profile/edit', '/client/checkout'];
+  const hideSearchOnPages = ['/client/profile', '/client/orders', '/client/profile/edit', '/client/checkout'];
   const shouldHideSearch = hideSearchOnPages.includes(location.pathname);
   const shouldHideAddress = ['/client/profile/edit', '/client/checkout'].includes(location.pathname);
   const shouldHideCart = ['/client/profile/edit', '/client/checkout'].includes(location.pathname);
