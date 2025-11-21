@@ -120,6 +120,10 @@ export const reportsApi = {
     const response = await api.get('/reports/popular-items', { params });
     return response.data;
   },
+  getRevenueTrend: async (params: { days?: number }) => {
+    const response = await api.get('/reports/revenue-trend', { params });
+    return response.data;
+  },
 };
 
 // ==================== Settings API ====================
@@ -134,6 +138,22 @@ export const settingsApi = {
   },
 };
 
+// ==================== Profile API ====================
+export const profileApi = {
+  get: async () => {
+    const response = await api.get('/profile');
+    return response.data;
+  },
+  update: async (profileData: any) => {
+    const response = await api.put('/profile', profileData);
+    return response.data;
+  },
+  changePassword: async (passwordData: { current_password: string; new_password: string }) => {
+    const response = await api.put('/profile/password', passwordData);
+    return response.data;
+  },
+};
+
 // Export all APIs
 export default {
   dashboard: dashboardApi,
@@ -143,4 +163,5 @@ export default {
   categories: categoriesApi,
   reports: reportsApi,
   settings: settingsApi,
+  profile: profileApi,
 };

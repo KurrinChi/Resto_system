@@ -31,7 +31,13 @@ urlpatterns = [
     # Reports & Analytics
     path('reports/sales', views.sales_report, name='sales_report'),
     path('reports/popular-items', views.popular_items_report, name='popular_items_report'),
+    path('reports/revenue-trend', views.revenue_trend, name='revenue_trend'),
     
     # Settings
     path('settings', views.settings, name='settings'),
+    
+    # Profile
+    path('profile', views.profile, name='profile'),
+    path('profile/password', views.change_password, name='change_password'),
 ]
+

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Save,
   User,
@@ -13,33 +13,20 @@ import { Button } from "../../common/Button";
 import { Input } from "../../common/Input";
 import { THEME } from "../../../constants/theme";
 import { Avatar } from "../../common/Avatar";
+import { profileApi } from "../../../services/apiservice";
 
 export const Profile: React.FC = () => {
-  // Load from localStorage or use defaults
-  const loadProfile = () => {
-    const saved = localStorage.getItem("userProfile");
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return {
-      name: "Admin User",
-      email: "admin@restaurant.com",
-      phone: "+1 (555) 123-4567",
-      address: "123 Main St, City, State 12345",
-      bio: "Restaurant administrator with 5+ years of experience",
-      role: "Administrator",
-      avatar: "",
-    };
-  };
-
-  const profile = loadProfile();
-
-  const [name, setName] = useState(profile.name);
-  const [email, setEmail] = useState(profile.email);
-  const [phone, setPhone] = useState(profile.phone);
-  const [address, setAddress] = useState(profile.address);
-  const [bio, setBio] = useState(profile.bio);
-  const [avatar, setAvatar] = useState(profile.avatar);
+  const [loading, setLoading] = useState(true);
+  const [profileId, setProfileId] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [bio, setBio] = useState("");
+  const [role, setRole] = useState("Administrator");
+  const [avatar, setAvatar] = useState("");
+  const [createdAt, setCreatedAt] = useState("");
+  const [lastLogin, setLastLogin] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
 
   // Password change states
@@ -47,20 +34,59 @@ export const Profile: React.FC = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const handleSave = () => {
-    const updatedProfile = {
-      name,
-      email,
-      phone,
-      address,
-      bio,
-      role: profile.role,
-      avatar,
-    };
+  // Load profile from API
+  useEffect(() => {
+    loadProfile();
+  }, []);
 
-    localStorage.setItem("userProfile", JSON.stringify(updatedProfile));
-    alert("Profile updated successfully!");
-    setHasChanges(false);
+  const loadProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await profileApi.get();
+      
+      if (response.success && response.data) {
+        const data = response.data;
+        setProfileId(data.id);
+        setName(data.name || "Admin User");
+        setEmail(data.email || "admin@restaurant.com");
+        setPhone(data.phone || "");
+        setAddress(data.address || "");
+        setBio(data.bio || "");
+        setRole(data.role || "ADMIN");
+        setAvatar(data.avatar || "");
+        setCreatedAt(data.createdAt || "");
+        setLastLogin(data.lastLogin || "");
+      }
+    } catch (error) {
+      console.error("Error loading profile:", error);
+      alert("Failed to load profile. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const response = await profileApi.update({
+        name,
+        email,
+        phone,
+        address,
+        bio,
+        avatar,
+      });
+
+      if (response.success) {
+        alert("Profile updated successfully!");
+        setHasChanges(false);
+        loadProfile(); // Reload to get updated data
+      } else {
+        alert("Failed to update profile: " + (response.error || "Unknown error"));
+      }
+    } catch (error: any) {
+      console.error("Error saving profile:", error);
+      alert("Error updating profile: " + (error.message || "Network error"));
+    }
   };
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,7 +101,7 @@ export const Profile: React.FC = () => {
     }
   };
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       alert("Please fill all password fields");
       return;
@@ -91,12 +117,50 @@ export const Profile: React.FC = () => {
       return;
     }
 
-    // TODO: Implement actual password change API call
-    alert("Password changed successfully!");
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+    try {
+      const response = await profileApi.changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+
+      if (response.success) {
+        alert("Password changed successfully!");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        alert("Failed to change password: " + (response.error || "Unknown error"));
+      }
+    } catch (error: any) {
+      console.error("Error changing password:", error);
+      alert("Error changing password: " + (error.message || "Network error"));
+    }
   };
+
+  const formatDate = (isoString: string) => {
+    if (!isoString) return "N/A";
+    const date = new Date(isoString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
+            style={{ borderColor: THEME.colors.primary.DEFAULT }}
+          />
+          <p style={{ color: THEME.colors.text.secondary }}>Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 h-full overflow-y-auto pb-6">
@@ -170,7 +234,7 @@ export const Profile: React.FC = () => {
                 className="text-sm mt-1 mb-4"
                 style={{ color: THEME.colors.text.tertiary }}
               >
-                {profile.role}
+                {role}
               </p>
               <label htmlFor="avatar-upload">
                 <Button
@@ -377,7 +441,7 @@ export const Profile: React.FC = () => {
                 className="text-sm"
                 style={{ color: THEME.colors.text.tertiary }}
               >
-                October 23, 2025 at 1:30 PM
+                {formatDate(lastLogin)}
               </p>
             </div>
           </div>
@@ -397,7 +461,7 @@ export const Profile: React.FC = () => {
                 className="text-sm"
                 style={{ color: THEME.colors.text.tertiary }}
               >
-                January 15, 2024
+                {formatDate(createdAt)}
               </p>
             </div>
           </div>

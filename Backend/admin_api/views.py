@@ -579,23 +579,23 @@ def sales_report(request):
         if start_date and end_date:
             orders = [
                 o for o in orders
-                if start_date <= o.get('created_at', '')[:10] <= end_date
+                if o.get('dayKey', '') and start_date <= o.get('dayKey', '') <= end_date
             ]
         
-        total_sales = sum(float(o.get('total_amount', 0)) for o in orders)
+        total_sales = sum(float(o.get('totalFee', 0)) for o in orders)
         total_orders = len(orders)
         
         # Group by order type
         by_type = defaultdict(lambda: {'count': 0, 'revenue': 0})
         for order in orders:
-            order_type = order.get('order_type', 'UNKNOWN')
+            order_type = order.get('orderType', 'UNKNOWN')
             by_type[order_type]['count'] += 1
-            by_type[order_type]['revenue'] += float(order.get('total_amount', 0))
+            by_type[order_type]['revenue'] += float(order.get('totalFee', 0))
         
         # Group by status
         by_status = defaultdict(int)
         for order in orders:
-            by_status[order.get('status', 'UNKNOWN')] += 1
+            by_status[order.get('orderStatus', 'UNKNOWN')] += 1
         
         return Response({
             'success': True,
@@ -630,13 +630,15 @@ def popular_items_report(request):
         item_stats = defaultdict(lambda: {'count': 0, 'revenue': 0})
         
         for order in orders:
-            for item in order.get('items', []):
-                item_name = item.get('name', 'Unknown')
-                quantity = item.get('quantity', 0)
-                price = float(item.get('price', 0))
-                
-                item_stats[item_name]['count'] += quantity
-                item_stats[item_name]['revenue'] += quantity * price
+            order_list = order.get('orderList', [])
+            if isinstance(order_list, list):
+                for item in order_list:
+                    item_name = item.get('menuName', 'Unknown')
+                    quantity = item.get('quantity', 1)
+                    price = float(item.get('price', 0))
+                    
+                    item_stats[item_name]['count'] += quantity
+                    item_stats[item_name]['revenue'] += quantity * price
         
         # Sort by count and limit
         popular_items = sorted(
@@ -651,6 +653,52 @@ def popular_items_report(request):
         return Response({
             'success': True,
             'data': popular_items
+        })
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def revenue_trend(request):
+    """
+    Get revenue trend data for charts
+    GET /api/admin/reports/revenue-trend?days=30
+    """
+    try:
+        days_param = request.GET.get('days', '30')
+        days = int(days_param)
+        
+        orders = query_collection(COLLECTIONS['orders'])
+        
+        # Group revenue by day
+        daily_revenue = defaultdict(float)
+        daily_orders = defaultdict(int)
+        
+        for order in orders:
+            day_key = order.get('dayKey', '')
+            if day_key:
+                daily_revenue[day_key] += float(order.get('totalFee', 0))
+                daily_orders[day_key] += 1
+        
+        # Sort by date and get last N days
+        sorted_days = sorted(daily_revenue.keys(), reverse=True)[:days]
+        sorted_days.reverse()  # Chronological order
+        
+        trend_data = [
+            {
+                'date': day,
+                'revenue': daily_revenue[day],
+                'orders': daily_orders[day]
+            }
+            for day in sorted_days
+        ]
+        
+        return Response({
+            'success': True,
+            'data': trend_data
         })
     except Exception as e:
         return Response({
@@ -706,6 +754,186 @@ def settings(request):
                 'success': True,
                 'message': 'Settings updated successfully'
             })
+    
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ==================== PROFILE ====================
+
+@api_view(['GET', 'PUT'])
+def profile(request):
+    """
+    Get or update admin profile
+    GET/PUT /api/admin/profile
+    """
+    try:
+        # For now, use the first admin user or create a default one
+        # In production, this should use authenticated user from request.user
+        
+        if request.method == 'GET':
+            # Get admin users
+            admins = query_collection(COLLECTIONS['users'], filters=[('role', '==', 'ADMIN')], limit=1)
+            
+            if admins:
+                admin = admins[0]
+                return Response({
+                    'success': True,
+                    'data': {
+                        'id': admin.get('id'),
+                        'name': admin.get('fullName', 'Admin User'),
+                        'email': admin.get('email', 'admin@restaurant.com'),
+                        'phone': admin.get('phoneNumber', ''),
+                        'address': admin.get('address', ''),
+                        'bio': admin.get('bio', ''),
+                        'role': admin.get('role', 'ADMIN'),
+                        'avatar': admin.get('avatar', ''),
+                        'createdAt': admin.get('createdAt', ''),
+                        'lastLogin': admin.get('lastLogin', ''),
+                    }
+                })
+            else:
+                # Return default profile
+                return Response({
+                    'success': True,
+                    'data': {
+                        'id': 'admin-1',
+                        'name': 'Admin User',
+                        'email': 'admin@restaurant.com',
+                        'phone': '+1 (555) 123-4567',
+                        'address': '123 Main St, City, State 12345',
+                        'bio': 'Restaurant administrator',
+                        'role': 'ADMIN',
+                        'avatar': '',
+                        'createdAt': datetime.now().isoformat(),
+                        'lastLogin': datetime.now().isoformat(),
+                    }
+                })
+        
+        elif request.method == 'PUT':
+            data = request.data
+            
+            # Get admin users
+            admins = query_collection(COLLECTIONS['users'], filters=[('role', '==', 'ADMIN')], limit=1)
+            
+            update_data = {
+                'fullName': data.get('name'),
+                'email': data.get('email'),
+                'phoneNumber': data.get('phone'),
+                'address': data.get('address'),
+                'bio': data.get('bio'),
+                'avatar': data.get('avatar'),
+                'updatedAt': datetime.now().isoformat()
+            }
+            
+            # Remove None values
+            update_data = {k: v for k, v in update_data.items() if v is not None}
+            
+            if admins:
+                # Update existing admin
+                update_document(COLLECTIONS['users'], admins[0]['id'], update_data)
+                
+                # Get updated document
+                doc = get_document(COLLECTIONS['users'], admins[0]['id'])
+                updated_admin = {'id': doc.id, **doc.to_dict()} if doc.exists else admins[0]
+                
+                return Response({
+                    'success': True,
+                    'message': 'Profile updated successfully',
+                    'data': {
+                        'id': updated_admin.get('id'),
+                        'name': updated_admin.get('fullName'),
+                        'email': updated_admin.get('email'),
+                        'phone': updated_admin.get('phoneNumber'),
+                        'address': updated_admin.get('address'),
+                        'bio': updated_admin.get('bio'),
+                        'role': updated_admin.get('role'),
+                        'avatar': updated_admin.get('avatar'),
+                    }
+                })
+            else:
+                # Create new admin profile
+                new_admin = {
+                    'fullName': data.get('name', 'Admin User'),
+                    'email': data.get('email', 'admin@restaurant.com'),
+                    'phoneNumber': data.get('phone', ''),
+                    'address': data.get('address', ''),
+                    'bio': data.get('bio', ''),
+                    'role': 'ADMIN',
+                    'avatar': data.get('avatar', ''),
+                    'createdAt': datetime.now().isoformat(),
+                    'updatedAt': datetime.now().isoformat(),
+                }
+                
+                admin_id = add_document(COLLECTIONS['users'], new_admin)
+                
+                return Response({
+                    'success': True,
+                    'message': 'Profile created successfully',
+                    'data': {
+                        'id': admin_id,
+                        **new_admin
+                    }
+                })
+    
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['PUT'])
+def change_password(request):
+    """
+    Change admin password
+    PUT /api/admin/profile/password
+    """
+    try:
+        current_password = request.data.get('current_password')
+        new_password = request.data.get('new_password')
+        
+        if not current_password or not new_password:
+            return Response({
+                'success': False,
+                'error': 'Current password and new password are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if len(new_password) < 8:
+            return Response({
+                'success': False,
+                'error': 'Password must be at least 8 characters long'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get admin users
+        admins = query_collection(COLLECTIONS['users'], filters=[('role', '==', 'ADMIN')], limit=1)
+        
+        if not admins:
+            return Response({
+                'success': False,
+                'error': 'Admin user not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        admin = admins[0]
+        
+        # Verify current password (you should use proper password hashing)
+        # For now, we'll just update the password
+        # In production, use bcrypt or similar
+        
+        hashed_password = hashlib.sha256(new_password.encode()).hexdigest()
+        
+        update_document(COLLECTIONS['users'], admin['id'], {
+            'password': hashed_password,
+            'updatedAt': datetime.now().isoformat()
+        })
+        
+        return Response({
+            'success': True,
+            'message': 'Password changed successfully'
+        })
     
     except Exception as e:
         return Response({

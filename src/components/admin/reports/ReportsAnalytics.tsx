@@ -60,11 +60,16 @@ export const ReportsAnalytics: React.FC = () => {
     try {
       setLoading(true);
       
-      // Fetch dashboard stats and popular items
-      const [dashboardResponse, popularItemsResponse] = await Promise.all([
+      // Fetch dashboard stats, popular items, and revenue trend
+      const [dashboardResponse, popularItemsResponse, revenueTrendResponse] = await Promise.all([
         dashboardApi.getStats(),
-        reportsApi.getPopularItems({ limit: 5 }).catch(() => ({ success: false, data: [] }))
+        reportsApi.getPopularItems({ limit: 5 }),
+        reportsApi.getRevenueTrend({ days: 30 })
       ]);
+
+      console.log('Dashboard Response:', dashboardResponse);
+      console.log('Popular Items Response:', popularItemsResponse);
+      console.log('Revenue Trend Response:', revenueTrendResponse);
 
       if (dashboardResponse.success) {
         const data = dashboardResponse.data;
@@ -79,22 +84,42 @@ export const ReportsAnalytics: React.FC = () => {
           orderGrowth: 0,
         });
 
-        // Set orders status data
-        setOrdersStatusData([
+        // Set orders status data - filter out zero values
+        const statusData = [
           { name: "Received", value: data.pending_orders || 0 },
           { name: "Preparing", value: data.preparing_orders || 0 },
           { name: "Ready", value: data.ready_orders || 0 },
           { name: "Completed", value: data.completed_orders || 0 },
-        ]);
+        ].filter(item => item.value > 0);
+        
+        console.log('Orders Status Data:', statusData);
+        setOrdersStatusData(statusData);
       }
 
       // Set popular items data
-      if (popularItemsResponse.success && popularItemsResponse.data) {
+      if (popularItemsResponse.success && popularItemsResponse.data && popularItemsResponse.data.length > 0) {
         const items = popularItemsResponse.data.map((item: any) => ({
-          name: item.name,
+          name: item.name || 'Unknown',
           sales: item.count || 0
         }));
+        console.log('Top Items Data:', items);
         setTopItemsData(items);
+      } else {
+        console.log('No popular items data');
+        setTopItemsData([]);
+      }
+
+      // Set revenue trend data
+      if (revenueTrendResponse.success && revenueTrendResponse.data && revenueTrendResponse.data.length > 0) {
+        const trendData = revenueTrendResponse.data.map((item: any) => ({
+          date: item.date,
+          revenue: parseFloat(item.revenue) || 0
+        }));
+        console.log('Revenue Trend Data:', trendData);
+        setRevenueData(trendData);
+      } else {
+        console.log('No revenue trend data');
+        setRevenueData([]);
       }
       
       setLoading(false);
@@ -343,7 +368,17 @@ export const ReportsAnalytics: React.FC = () => {
           </div>
           <div className="p-6">
             <div className="h-80">
-              <RevenueChart data={revenueData} />
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <p style={{ color: THEME.colors.text.secondary }}>Loading...</p>
+                </div>
+              ) : revenueData.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <p style={{ color: THEME.colors.text.secondary }}>No revenue data available</p>
+                </div>
+              ) : (
+                <RevenueChart data={revenueData} />
+              )}
             </div>
           </div>
         </div>
@@ -368,7 +403,17 @@ export const ReportsAnalytics: React.FC = () => {
           </div>
           <div className="p-6">
             <div className="h-80">
-              <OrdersDonutChart data={ordersStatusData} />
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <p style={{ color: THEME.colors.text.secondary }}>Loading...</p>
+                </div>
+              ) : ordersStatusData.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <p style={{ color: THEME.colors.text.secondary }}>No order data available</p>
+                </div>
+              ) : (
+                <OrdersDonutChart data={ordersStatusData} />
+              )}
             </div>
           </div>
         </div>
@@ -395,7 +440,17 @@ export const ReportsAnalytics: React.FC = () => {
           </div>
           <div className="p-6">
             <div className="h-80">
-              <TopItemsChart data={topItemsData} />
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <p style={{ color: THEME.colors.text.secondary }}>Loading...</p>
+                </div>
+              ) : topItemsData.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <p style={{ color: THEME.colors.text.secondary }}>No items data available</p>
+                </div>
+              ) : (
+                <TopItemsChart data={topItemsData} />
+              )}
             </div>
           </div>
         </div>
@@ -420,7 +475,17 @@ export const ReportsAnalytics: React.FC = () => {
           </div>
           <div className="p-6">
             <div className="h-80">
-              <CustomerGrowthChart data={customerGrowthData} />
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <p style={{ color: THEME.colors.text.secondary }}>Loading...</p>
+                </div>
+              ) : customerGrowthData.length === 0 ? (
+                <div className="flex items-center justify-center h-full">
+                  <p style={{ color: THEME.colors.text.secondary }}>No customer data available</p>
+                </div>
+              ) : (
+                <CustomerGrowthChart data={customerGrowthData} />
+              )}
             </div>
           </div>
         </div>
