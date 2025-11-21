@@ -60,16 +60,18 @@ export const ReportsAnalytics: React.FC = () => {
     try {
       setLoading(true);
       
-      // Fetch dashboard stats, popular items, and revenue trend
-      const [dashboardResponse, popularItemsResponse, revenueTrendResponse] = await Promise.all([
+      // Fetch dashboard stats, popular items, revenue trend, and category sales
+      const [dashboardResponse, popularItemsResponse, revenueTrendResponse, categorySalesResponse] = await Promise.all([
         dashboardApi.getStats(),
         reportsApi.getPopularItems({ limit: 5 }),
-        reportsApi.getRevenueTrend({ days: 30 })
+        reportsApi.getRevenueTrend({ days: 30 }),
+        reportsApi.getCategorySales()
       ]);
 
       console.log('Dashboard Response:', dashboardResponse);
       console.log('Popular Items Response:', popularItemsResponse);
       console.log('Revenue Trend Response:', revenueTrendResponse);
+      console.log('Category Sales Response:', categorySalesResponse);
 
       if (dashboardResponse.success) {
         const data = dashboardResponse.data;
@@ -120,6 +122,15 @@ export const ReportsAnalytics: React.FC = () => {
       } else {
         console.log('No revenue trend data');
         setRevenueData([]);
+      }
+
+      // Set category sales data
+      if (categorySalesResponse.success && categorySalesResponse.data && categorySalesResponse.data.length > 0) {
+        console.log('Category Sales Data:', categorySalesResponse.data);
+        setCategorySales(categorySalesResponse.data);
+      } else {
+        console.log('No category sales data');
+        setCategorySales([]);
       }
       
       setLoading(false);
@@ -567,7 +578,7 @@ export const ReportsAnalytics: React.FC = () => {
                     className="px-6 py-4 whitespace-nowrap text-sm"
                     style={{ color: THEME.colors.text.primary }}
                   >
-                    $
+                    ₱
                     {item.revenue.toLocaleString("en-US", {
                       minimumFractionDigits: 2,
                     })}

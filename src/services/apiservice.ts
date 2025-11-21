@@ -124,6 +124,10 @@ export const reportsApi = {
     const response = await api.get('/reports/revenue-trend', { params });
     return response.data;
   },
+  getCategorySales: async () => {
+    const response = await api.get('/reports/category-sales');
+    return response.data;
+  },
 };
 
 // ==================== Settings API ====================

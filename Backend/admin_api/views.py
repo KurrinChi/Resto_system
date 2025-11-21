@@ -707,6 +707,67 @@ def revenue_trend(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(['GET'])
+def category_sales(request):
+    """
+    Get sales by category
+    GET /api/admin/reports/category-sales
+    """
+    try:
+        orders = query_collection(COLLECTIONS['orders'])
+        menu_items = query_collection(COLLECTIONS['menu_items'])
+        
+        # Create a mapping of menu item names to categories
+        menu_categories = {}
+        for item in menu_items:
+            menu_name = item.get('menuName', item.get('name', ''))
+            category = item.get('category', item.get('type', 'Other'))
+            if menu_name:
+                menu_categories[menu_name] = category
+        
+        # Calculate sales by category
+        category_stats = defaultdict(lambda: {'orders': 0, 'revenue': 0, 'count': 0})
+        
+        for order in orders:
+            order_list = order.get('orderList', [])
+            if isinstance(order_list, list):
+                for item in order_list:
+                    item_name = item.get('menuName', '')
+                    quantity = item.get('quantity', 1)
+                    price = float(item.get('price', 0))
+                    
+                    # Get category from menu items mapping
+                    category = menu_categories.get(item_name, 'Other')
+                    
+                    category_stats[category]['orders'] += 1
+                    category_stats[category]['count'] += quantity
+                    category_stats[category]['revenue'] += quantity * price
+        
+        # Convert to list and calculate growth (mock data for now)
+        category_sales_list = [
+            {
+                'category': category,
+                'orders': stats['orders'],
+                'revenue': round(stats['revenue'], 2),
+                'growth': round((stats['orders'] / max(1, len(orders))) * 100, 1)  # Simple percentage
+            }
+            for category, stats in category_stats.items()
+        ]
+        
+        # Sort by revenue
+        category_sales_list.sort(key=lambda x: x['revenue'], reverse=True)
+        
+        return Response({
+            'success': True,
+            'data': category_sales_list
+        })
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 # ==================== SETTINGS ====================
 
 @api_view(['GET', 'PUT'])
