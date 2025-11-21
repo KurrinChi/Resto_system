@@ -14,6 +14,7 @@ import { TopItemsChart } from "./charts/TopItemsChart.tsx";
 import { CustomerGrowthChart } from "./charts/CustomerGrowthChart.tsx";
 import { exportSingleSheetReport } from "../../../utils/exportUtils";
 import { THEME } from "../../../constants/theme";
+import { reportsApi, dashboardApi } from "../../../services/apiservice";
 
 interface AnalyticsStats {
   totalRevenue: number;
@@ -34,58 +35,22 @@ interface CategorySales {
 export const ReportsAnalytics: React.FC = () => {
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [reportType, setReportType] = useState("sales");
-  // loading state removed for demo/static data
+  const [loading, setLoading] = useState(true);
 
-  const stats: AnalyticsStats = {
-    totalRevenue: 45678.9,
-    totalOrders: 1234,
-    totalCustomers: 567,
-    averageOrder: 37.02,
-    revenueGrowth: 12.5,
-    orderGrowth: 8.3,
-  };
+  const [stats, setStats] = useState<AnalyticsStats>({
+    totalRevenue: 0,
+    totalOrders: 0,
+    totalCustomers: 0,
+    averageOrder: 0,
+    revenueGrowth: 0,
+    orderGrowth: 0,
+  });
 
-  const revenueData = [
-    { date: "Oct 17", revenue: 4200 },
-    { date: "Oct 18", revenue: 3800 },
-    { date: "Oct 19", revenue: 5100 },
-    { date: "Oct 20", revenue: 4600 },
-    { date: "Oct 21", revenue: 5400 },
-    { date: "Oct 22", revenue: 6200 },
-    { date: "Oct 23", revenue: 5800 },
-  ];
-
-  const ordersStatusData = [
-    { name: "Pending", value: 120 },
-    { name: "Preparing", value: 280 },
-    { name: "Ready", value: 180 },
-    { name: "Delivered", value: 520 },
-    { name: "Cancelled", value: 45 },
-  ];
-
-  const topItemsData = [
-    { name: "Classic Burger", sales: 245 },
-    { name: "Margherita Pizza", sales: 189 },
-    { name: "Grilled Salmon", sales: 167 },
-    { name: "Caesar Salad", sales: 134 },
-    { name: "Pasta Carbonara", sales: 98 },
-  ];
-
-  const customerGrowthData = [
-    { month: "Apr", customers: 320 },
-    { month: "May", customers: 380 },
-    { month: "Jun", customers: 420 },
-    { month: "Jul", customers: 450 },
-    { month: "Aug", customers: 490 },
-    { month: "Sep", customers: 530 },
-    { month: "Oct", customers: 567 },
-  ];
-
-  const categorySales: CategorySales[] = [
-    { category: "Burgers", orders: 345, revenue: 4481.55, growth: 15.3 },
-    { category: "Pizza", orders: 289, revenue: 4332.11, growth: 12.8 },
-    { category: "Pasta", orders: 201, revenue: 2811.99, growth: 8.2 },
-  ];
+  const [revenueData, setRevenueData] = useState<any[]>([]);
+  const [ordersStatusData, setOrdersStatusData] = useState<any[]>([]);
+  const [topItemsData, setTopItemsData] = useState<any[]>([]);
+  const [customerGrowthData, setCustomerGrowthData] = useState<any[]>([]);
+  const [categorySales, setCategorySales] = useState<CategorySales[]>([]);
 
   useEffect(() => {
     fetchAnalyticsData();
@@ -93,19 +58,49 @@ export const ReportsAnalytics: React.FC = () => {
 
   const fetchAnalyticsData = async () => {
     try {
-      // TODO: Replace with actual API calls
-      // const response = await fetch(`/api/analytics?start=${dateRange.start}&end=${dateRange.end}&type=${reportType}`);
-      // const data = await response.json();
-      // setStats(data.stats);
-      // setRevenueData(data.revenueData);
-      // setOrdersStatusData(data.ordersStatusData);
-      // setTopItemsData(data.topItemsData);
-      // setCustomerGrowthData(data.customerGrowthData);
-      // setCategorySales(data.categorySales);
+      setLoading(true);
+      
+      // Fetch dashboard stats and popular items
+      const [dashboardResponse, popularItemsResponse] = await Promise.all([
+        dashboardApi.getStats(),
+        reportsApi.getPopularItems({ limit: 5 }).catch(() => ({ success: false, data: [] }))
+      ]);
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    } catch (error) {
-      console.error("Error fetching analytics:", error);
+      if (dashboardResponse.success) {
+        const data = dashboardResponse.data;
+        
+        // Update stats
+        setStats({
+          totalRevenue: data.total_revenue || 0,
+          totalOrders: data.total_orders || 0,
+          totalCustomers: data.total_users || 0,
+          averageOrder: data.avg_order_value || 0,
+          revenueGrowth: 0,
+          orderGrowth: 0,
+        });
+
+        // Set orders status data
+        setOrdersStatusData([
+          { name: "Received", value: data.pending_orders || 0 },
+          { name: "Preparing", value: data.preparing_orders || 0 },
+          { name: "Ready", value: data.ready_orders || 0 },
+          { name: "Completed", value: data.completed_orders || 0 },
+        ]);
+      }
+
+      // Set popular items data
+      if (popularItemsResponse.success && popularItemsResponse.data) {
+        const items = popularItemsResponse.data.map((item: any) => ({
+          name: item.name,
+          sales: item.count || 0
+        }));
+        setTopItemsData(items);
+      }
+      
+      setLoading(false);
+    } catch (err: any) {
+      console.error('Error fetching analytics data:', err);
+      setLoading(false);
     }
   };
 

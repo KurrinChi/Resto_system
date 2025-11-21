@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   DollarSign,
   ShoppingBag,
@@ -10,8 +10,55 @@ import {
   Package,
 } from "lucide-react";
 import { THEME } from "../../../constants/theme";
+import { dashboardApi } from "../../../services/apiservice";
 
 export const Dashboard: React.FC = () => {
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const response = await dashboardApi.getStats();
+      if (response.success) {
+        setStats(response.data);
+      }
+    } catch (err: any) {
+      console.error('Error fetching dashboard data:', err);
+      setError(err.message || 'Failed to load dashboard data');
+      // Use mock data as fallback
+      setStats({
+        total_users: 567,
+        total_orders: 1234,
+        total_menu_items: 48,
+        total_revenue: 68575.00,
+        today_orders: 45,
+        today_revenue: 2340.50,
+        pending_orders: 12,
+        active_customers: 567,
+        avg_order_value: 55.57
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p style={{ color: THEME.colors.text.tertiary }}>Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Hero Section with Large Metrics */}
@@ -45,7 +92,7 @@ export const Dashboard: React.FC = () => {
               className="text-5xl font-bold"
               style={{ color: THEME.colors.text.primary }}
             >
-              $68,575<span className="text-2xl">.00</span>
+              ${stats?.total_revenue?.toLocaleString() || '0'}<span className="text-2xl">.00</span>
             </h1>
           </div>
         </div>
@@ -190,7 +237,7 @@ export const Dashboard: React.FC = () => {
             className="text-2xl font-bold mb-1"
             style={{ color: THEME.colors.text.primary }}
           >
-            1,234
+            {stats?.total_orders?.toLocaleString() || '0'}
           </p>
           <p className="text-xs" style={{ color: THEME.colors.text.tertiary }}>
             Total Orders
@@ -226,7 +273,7 @@ export const Dashboard: React.FC = () => {
             className="text-2xl font-bold mb-1"
             style={{ color: THEME.colors.text.primary }}
           >
-            567
+            {stats?.active_customers || stats?.total_users || '0'}
           </p>
           <p className="text-xs" style={{ color: THEME.colors.text.tertiary }}>
             Active Customers
@@ -262,7 +309,7 @@ export const Dashboard: React.FC = () => {
             className="text-2xl font-bold mb-1"
             style={{ color: THEME.colors.text.primary }}
           >
-            $55.57
+            ${stats?.avg_order_value?.toFixed(2) || '0.00'}
           </p>
           <p className="text-xs" style={{ color: THEME.colors.text.tertiary }}>
             Avg Order Value
@@ -298,7 +345,7 @@ export const Dashboard: React.FC = () => {
             className="text-2xl font-bold mb-1"
             style={{ color: THEME.colors.text.primary }}
           >
-            48
+            {stats?.pending_orders || '0'}
           </p>
           <p className="text-xs" style={{ color: THEME.colors.text.tertiary }}>
             Pending Orders

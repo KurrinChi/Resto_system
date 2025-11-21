@@ -1,43 +1,47 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { MapPin, Navigation } from "lucide-react";
 import { SearchBar } from "../../common/SearchBar";
 import { TrackingTable } from "./TrackingTable.tsx";
 import { TrackingMap } from "./TrackingMap.tsx";
 import { THEME } from "../../../constants/theme";
 import type { CustomerTracking as CustomerTrackingType } from "../../../types";
-
-// Mock data
-const mockTrackingData: CustomerTrackingType[] = [
-  {
-    orderId: "1",
-    orderNumber: "ORD-2024-001",
-    customerName: "John Doe",
-    status: "out_for_delivery",
-    estimatedDelivery: "2024-10-21T14:30:00",
-    location: { lat: 40.7128, lng: -74.006 },
-    driver: "Mike Johnson",
-  },
-  {
-    orderId: "2",
-    orderNumber: "ORD-2024-002",
-    customerName: "Jane Smith",
-    status: "preparing",
-    estimatedDelivery: "2024-10-21T15:00:00",
-    driver: "Sarah Williams",
-  },
-  {
-    orderId: "3",
-    orderNumber: "ORD-2024-003",
-    customerName: "Bob Johnson",
-    status: "delivered",
-    estimatedDelivery: "2024-10-21T13:45:00",
-    location: { lat: 40.7589, lng: -73.9851 },
-    driver: "Tom Brown",
-  },
-];
+import { ordersApi } from "../../../services/apiservice";
 
 export const CustomerTracking: React.FC = () => {
-  const [trackingData] = useState<CustomerTrackingType[]>(mockTrackingData);
+  const [trackingData, setTrackingData] = useState<CustomerTrackingType[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTrackingData();
+    // Refresh every 10 seconds for real-time updates
+    const interval = setInterval(fetchTrackingData, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchTrackingData = async () => {
+    try {
+      const response = await ordersApi.getAll();
+      if (response.success) {
+        // Transform orders to tracking data
+        const tracking = response.data
+          .filter((order: any) => ['received', 'preparing', 'ready'].includes(order.orderStatus))
+          .map((order: any) => ({
+            orderId: order.id,
+            orderNumber: order.id,
+            customerName: order.guestInfo?.name || order.userId || 'Customer',
+            status: order.orderStatus === 'ready' ? 'out_for_delivery' : order.orderStatus,
+            estimatedDelivery: order.createdAt,
+            location: order.deliveryAddress?.coordinates || undefined,
+            driver: order.assignedDriver || 'Unassigned'
+          }));
+        setTrackingData(tracking);
+      }
+    } catch (err) {
+      console.error('Error fetching tracking data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTracking, setSelectedTracking] =
     useState<CustomerTrackingType | null>(null);

@@ -6,8 +6,29 @@ class Role(models.Model):
     description = models.TextField(blank=True)
 
 class User(AbstractUser):
-    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    avatar = models.URLField(blank=True, null=True)  # Changed from ImageField
     roles = models.ManyToManyField(Role, blank=True)
+    
+    class Meta:
+        # Fix conflicts with auth.User
+        verbose_name = 'Custom User'
+        verbose_name_plural = 'Custom Users'
+    
+    # Override to avoid conflicts
+    groups = models.ManyToManyField(
+        'auth.Group',
+        verbose_name='groups',
+        blank=True,
+        related_name='custom_user_set',  # Changed related_name
+        related_query_name='custom_user',
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        verbose_name='user permissions',
+        blank=True,
+        related_name='custom_user_set',  # Changed related_name
+        related_query_name='custom_user',
+    )
 
 class Address(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses')

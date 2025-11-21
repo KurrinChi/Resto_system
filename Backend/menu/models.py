@@ -9,7 +9,7 @@ class MenuItem(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='items')
     name = models.CharField(max_length=128)
     description = models.TextField(blank=True)
-    image = models.ImageField(upload_to='menu_items/', blank=True, null=True)
+    image = models.URLField(blank=True, null=True)  # Changed from ImageField
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

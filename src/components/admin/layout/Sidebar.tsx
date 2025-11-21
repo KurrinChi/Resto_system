@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 /** @jsxImportSource react */
 import {
@@ -18,12 +18,13 @@ import { useAdmin } from "../../../contexts/AdminContext";
 import { BRANDING } from "../../../constants/branding";
 import { THEME } from "../../../constants/theme";
 import { Avatar } from "../../common/Avatar";
+import { dashboardApi } from "../../../services/apiservice";
 
 interface MenuItem {
   path: string;
   label: string;
   icon: React.ReactNode;
-  badge?: number;
+  badgeKey?: string;
 }
 
 const menuItems: MenuItem[] = [
@@ -46,7 +47,7 @@ const menuItems: MenuItem[] = [
     path: "/admin/orders",
     label: "Orders",
     icon: <ShoppingCart className="w-5 h-5" />,
-    badge: 3,
+    badgeKey: 'pending_orders',
   },
   {
     path: "/admin/tracking",
@@ -71,6 +72,27 @@ export const Sidebar: React.FC = () => {
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const [showMobileProfileMenu, setShowMobileProfileMenu] =
     React.useState(false);
+  const [badges, setBadges] = useState<{[key: string]: number}>({});
+
+  useEffect(() => {
+    fetchBadgeCounts();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchBadgeCounts, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchBadgeCounts = async () => {
+    try {
+      const response = await dashboardApi.getStats();
+      if (response.success) {
+        setBadges({
+          pending_orders: response.data.pending_orders || 0
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching badge counts:', err);
+    }
+  };
 
   return (
     <>
@@ -186,7 +208,7 @@ export const Sidebar: React.FC = () => {
                   >
                     {item.label}
                   </span>
-                  {item.badge && (
+                  {item.badgeKey && badges[item.badgeKey] > 0 && (
                     <span
                       className="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full"
                       style={{
@@ -197,12 +219,12 @@ export const Sidebar: React.FC = () => {
                         opacity: isExpanded ? 1 : 0,
                       }}
                     >
-                      {item.badge}
+                      {badges[item.badgeKey]}
                     </span>
                   )}
                 </>
               )}
-              {!isExpanded && item.badge && (
+              {!isExpanded && item.badgeKey && badges[item.badgeKey] > 0 && (
                 <span
                   className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full"
                   style={{
@@ -210,7 +232,7 @@ export const Sidebar: React.FC = () => {
                     color: THEME.colors.text.primary,
                   }}
                 >
-                  {item.badge}
+                  {badges[item.badgeKey]}
                 </span>
               )}
             </NavLink>
@@ -496,7 +518,7 @@ export const Sidebar: React.FC = () => {
               <span className="text-sm font-medium flex-1 truncate">
                 {item.label}
               </span>
-              {item.badge && (
+              {item.badgeKey && badges[item.badgeKey] > 0 && (
                 <span
                   className="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full"
                   style={{
@@ -504,7 +526,7 @@ export const Sidebar: React.FC = () => {
                     color: THEME.colors.text.primary,
                   }}
                 >
-                  {item.badge}
+                  {badges[item.badgeKey]}
                 </span>
               )}
             </NavLink>
