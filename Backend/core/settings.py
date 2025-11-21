@@ -105,6 +105,7 @@ TEMPLATES = [
     },
 ]
 
+FIREBASE_SERVICE_ACCOUNT = BASE_DIR / 'firebase_service_account.json'
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR.parent / 'frontend/dist']
 STATIC_ROOT = BASE_DIR.parent / 'staticfiles'
