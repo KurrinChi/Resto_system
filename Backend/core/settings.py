@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_vite',
     'drf_yasg',
+    'accounts',  # Customer authentication (SQLite)
     'admin_api',  # Admin API for Firebase Firestore
     #  Legacy Django ORM models (not used, but required for imports)
     'users',

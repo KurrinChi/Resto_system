@@ -3,31 +3,63 @@ import { useNavigate } from 'react-router-dom';
 import { CLIENT_THEME as THEME } from '../../constants/clientTheme';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 
-type User = {
-  id: string;
-  username: string;
-  email: string;
-  password: string;
-};
-
-const UsersKey = 'rs_users_v1';
-
 export const Login: React.FC = () => {
   const [user, setUser] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const raw = localStorage.getItem(UsersKey);
-    const users: User[] = raw ? JSON.parse(raw) : [];
-    const found = users.find((u) => u.username === user || u.email === user);
-    if (!found) return setError('User not found');
-    if (found.password !== password) return setError('Incorrect password');
-    localStorage.setItem('rs_current_user', JSON.stringify(found));
-    navigate('/client');
+    setLoading(true);
+
+    // Basic validation
+    if (!user.trim() || !password.trim()) {
+      setError('Please fill in all fields');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:8000/api/auth/login/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user,
+          password: password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Login failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      if (data.success) {
+        // Route based on role
+        if (data.role === 'Admin') {
+          navigate('/admin');
+        } else if (data.role === 'Customer') {
+          navigate('/client');
+        } else {
+          setError('Invalid user role');
+        }
+      } else {
+        setError('Login failed. Please check your credentials.');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Unable to connect to server. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -79,7 +111,7 @@ export const Login: React.FC = () => {
             {/* Username/Email Input */}
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: THEME.colors.text.secondary }}>
-                Username or Email
+                Email
               </label>
               <div className="relative">
                 <Mail 
@@ -87,10 +119,10 @@ export const Login: React.FC = () => {
                   style={{ color: THEME.colors.text.tertiary }} 
                 />
                 <input 
-                  type="text"
+                  type="email"
                   value={user} 
                   onChange={(e) => setUser(e.target.value)}
-                  placeholder="Enter your username or email"
+                  placeholder="Enter your email"
                   className="w-full pl-11 pr-4 py-3 rounded-lg border outline-none focus:ring-2 transition-all"
                   style={{
                     backgroundColor: THEME.colors.background.secondary,
@@ -143,14 +175,15 @@ export const Login: React.FC = () => {
             {/* Sign In Button */}
             <button
               type="submit"
-              className="w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90"
+              disabled={loading}
+              className="w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
               style={{
                 backgroundColor: THEME.colors.primary.DEFAULT,
                 color: '#FFFFFF'
               }}
             >
-              Sign In
-              <ArrowRight className="w-5 h-5" />
+              {loading ? 'Signing in...' : 'Sign In'}
+              {!loading && <ArrowRight className="w-5 h-5" />}
             </button>
 
             {/* Divider */}

@@ -1,44 +1,90 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CLIENT_THEME as THEME } from '../../constants/clientTheme';
-import { User as UserIcon, Mail, Lock, ArrowRight } from 'lucide-react';
-
-type User = {
-  id: string;
-  username: string;
-  email: string;
-  password: string;
-  name?: string;
-};
-
-const UsersKey = 'rs_users_v1';
+import { User as UserIcon, Mail, Lock, ArrowRight, Phone, MapPin } from 'lucide-react';
 
 export const Register: React.FC = () => {
+  const [firstName, setFirstName] = React.useState('');
+  const [lastName, setLastName] = React.useState('');
   const [username, setUsername] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [phone, setPhone] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validatePhone = (phone: string): boolean => {
+    // Philippine phone number format: 09XX-XXX-XXXX or 9XXXXXXXXX
+    const phoneRegex = /^(09|\+639)\d{9}$/;
+    return phoneRegex.test(phone.replace(/[-\s]/g, ''));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!username || !email || !password) return setError('Please fill all fields');
 
+    // Validation
+    if (!firstName.trim()) return setError('First name is required');
+    if (!lastName.trim()) return setError('Last name is required');
+    if (!username.trim()) return setError('Username is required');
+    if (!email.trim()) return setError('Email is required');
+    if (!password || password.length < 6) return setError('Password must be at least 6 characters');
+    if (!phone.trim()) return setError('Phone number is required');
+    if (!validatePhone(phone)) return setError('Please enter a valid Philippine phone number (09XXXXXXXXX)');
+
+    setLoading(true);
     try {
-      const raw = localStorage.getItem(UsersKey);
-      const users: User[] = raw ? JSON.parse(raw) : [];
-      if (users.find((u) => u.username === username)) return setError('Username already exists');
-      if (users.find((u) => u.email === email)) return setError('Email already registered');
+      const fullName = `${firstName.trim()} ${lastName.trim()}`;
+      const currentDateTime = new Date().toISOString();
+      
+      const response = await fetch('http://localhost:8000/api/auth/register/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          fullName: fullName,
+          name: username.trim(),
+          email: email.trim(),
+          phoneNumber: phone.trim(),
+          phone: phone.trim(),
+          address: '',
+          bio: '',
+          role: 'Customer',
+          status: 'active',
+          avatar: '',
+          password: password,
+          login_attempts: 0,
+          createdAt: currentDateTime,
+          created_at: currentDateTime,
+          lastLogin: null,
+          updated_at: currentDateTime,
+        }),
+      });
 
-      const user: User = { id: Date.now().toString(), username, email, password };
-      users.push(user);
-      localStorage.setItem(UsersKey, JSON.stringify(users));
-      // Simple auto-login by saving current user
-      localStorage.setItem('rs_current_user', JSON.stringify(user));
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorMsg = data.error || data.message || 'Registration failed';
+        throw new Error(errorMsg);
+      }
+
+      // Store user info locally for session
+      const userData = {
+        id: data.id,
+        fullName: fullName,
+        name: username.trim(),
+        email: email.trim(),
+        role: 'Customer',
+        phoneNumber: phone.trim(),
+      };
+      localStorage.setItem('rs_current_user', JSON.stringify(userData));
       navigate('/client');
-    } catch (err) {
-      setError('Failed to register');
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      setError(err.message || 'Failed to register. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -87,7 +133,49 @@ export const Register: React.FC = () => {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* First Name and Last Name */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: THEME.colors.text.secondary }}>
+                  First Name
+                </label>
+                <input 
+                  type="text"
+                  value={firstName} 
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="First name"
+                  className="w-full px-4 py-3 rounded-lg border outline-none focus:ring-2 transition-all"
+                  style={{
+                    backgroundColor: THEME.colors.background.secondary,
+                    borderColor: THEME.colors.border.DEFAULT,
+                    color: THEME.colors.text.primary,
+                    '--tw-ring-color': THEME.colors.primary.DEFAULT
+                  } as React.CSSProperties}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: THEME.colors.text.secondary }}>
+                  Last Name
+                </label>
+                <input 
+                  type="text"
+                  value={lastName} 
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Last name"
+                  className="w-full px-4 py-3 rounded-lg border outline-none focus:ring-2 transition-all"
+                  style={{
+                    backgroundColor: THEME.colors.background.secondary,
+                    borderColor: THEME.colors.border.DEFAULT,
+                    color: THEME.colors.text.primary,
+                    '--tw-ring-color': THEME.colors.primary.DEFAULT
+                  } as React.CSSProperties}
+                  required
+                />
+              </div>
+            </div>
+
             {/* Username Input */}
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: THEME.colors.text.secondary }}>
@@ -156,7 +244,35 @@ export const Register: React.FC = () => {
                   type="password"
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create a password"
+                  placeholder="Create a password (min 6 characters)"
+                  className="w-full pl-11 pr-4 py-3 rounded-lg border outline-none focus:ring-2 transition-all"
+                  style={{
+                    backgroundColor: THEME.colors.background.secondary,
+                    borderColor: THEME.colors.border.DEFAULT,
+                    color: THEME.colors.text.primary,
+                    '--tw-ring-color': THEME.colors.primary.DEFAULT
+                  } as React.CSSProperties}
+                  required
+                  minLength={6}
+                />
+              </div>
+            </div>
+
+            {/* Phone Number Input */}
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: THEME.colors.text.secondary }}>
+                Phone Number
+              </label>
+              <div className="relative">
+                <Phone 
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" 
+                  style={{ color: THEME.colors.text.tertiary }} 
+                />
+                <input 
+                  type="tel"
+                  value={phone} 
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="09XX-XXX-XXXX"
                   className="w-full pl-11 pr-4 py-3 rounded-lg border outline-none focus:ring-2 transition-all"
                   style={{
                     backgroundColor: THEME.colors.background.secondary,
@@ -168,6 +284,8 @@ export const Register: React.FC = () => {
                 />
               </div>
             </div>
+
+          
 
             {/* Error Message */}
             {error && (
@@ -182,14 +300,15 @@ export const Register: React.FC = () => {
             {/* Register Button */}
             <button
               type="submit"
-              className="w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90"
+              disabled={loading}
+              className="w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
               style={{
                 backgroundColor: THEME.colors.primary.DEFAULT,
                 color: '#FFFFFF'
               }}
             >
-              Create Account
-              <ArrowRight className="w-5 h-5" />
+              {loading ? 'Creating Account...' : 'Create Account'}
+              {!loading && <ArrowRight className="w-5 h-5" />}
             </button>
 
             {/* Divider */}
