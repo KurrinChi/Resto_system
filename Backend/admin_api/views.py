@@ -12,6 +12,103 @@ from utils.firebase_config import (
 )
 import hashlib
 from collections import defaultdict
+import re
+
+
+# ==================== HELPER FUNCTIONS ====================
+
+def get_next_order_number():
+    """
+    Get the next available order number by finding the highest existing order ID
+    Returns: str like 'order101', 'order102', etc.
+    """
+    try:
+        orders = query_collection(COLLECTIONS['orders'])
+        
+        # Extract all numeric IDs from order documents
+        max_num = 0
+        for order in orders:
+            order_id = order.get('id', '')
+            # Match order001, order002, etc.
+            match = re.match(r'order(\d+)', order_id)
+            if match:
+                num = int(match.group(1))
+                max_num = max(max_num, num)
+        
+        # Return next number with padding
+        next_num = max_num + 1
+        return f"order{next_num:03d}"
+    except Exception as e:
+        print(f"Error getting next order number: {e}")
+        # Fallback to timestamp-based ID
+        return f"order_{int(datetime.now().timestamp())}"
+
+
+def get_next_user_id(role):
+    """
+    Get the next available user ID based on role
+    Returns: str like 'admin01', 'customer01', 'staff01', etc.
+    """
+    try:
+        users = query_collection(COLLECTIONS['users'])
+        
+        # Map roles to prefixes
+        role_prefix_map = {
+            'ADMIN': 'admin',
+            'CUSTOMER': 'customer',
+            'CHEF': 'staff',
+            'CASHIER': 'staff',
+            'WAITER': 'staff',
+            'SECURITY_GUARD': 'staff',
+            'STAFF': 'staff'
+        }
+        
+        prefix = role_prefix_map.get(role.upper(), 'customer')
+        
+        # Find max number for this prefix
+        max_num = 0
+        for user in users:
+            user_id = user.get('id', '')
+            # Match admin01, customer01, staff01, etc.
+            match = re.match(rf'{prefix}(\d+)', user_id)
+            if match:
+                num = int(match.group(1))
+                max_num = max(max_num, num)
+        
+        # Return next number with 2-digit padding
+        next_num = max_num + 1
+        return f"{prefix}{next_num:02d}"
+    except Exception as e:
+        print(f"Error getting next user ID: {e}")
+        # Fallback to timestamp-based ID
+        return f"user_{int(datetime.now().timestamp())}"
+
+
+def get_next_menu_id():
+    """
+    Get the next available menu item ID
+    Returns: str like 'menu001', 'menu002', etc.
+    """
+    try:
+        menu_items = query_collection(COLLECTIONS['menu_items'])
+        
+        # Extract all numeric IDs from menu documents
+        max_num = 0
+        for item in menu_items:
+            item_id = item.get('id', '')
+            # Match menu001, menu002, etc.
+            match = re.match(r'menu(\d+)', item_id)
+            if match:
+                num = int(match.group(1))
+                max_num = max(max_num, num)
+        
+        # Return next number with 3-digit padding
+        next_num = max_num + 1
+        return f"menu{next_num:03d}"
+    except Exception as e:
+        print(f"Error getting next menu ID: {e}")
+        # Fallback to timestamp-based ID
+        return f"menu_{int(datetime.now().timestamp())}"
 
 
 # ==================== DASHBOARD ====================
@@ -178,11 +275,15 @@ def list_users(request):
 @api_view(['POST'])
 def create_user(request):
     """
-    Create a new user
+    Create a new user with role-based ID
     POST /api/admin/users
     """
     try:
         data = request.data
+        
+        # Get role for ID generation
+        role = data.get('role', 'CUSTOMER')
+        user_id = get_next_user_id(role)
         
         # Hash password
         password = data.get('password')
@@ -195,13 +296,15 @@ def create_user(request):
         data['status'] = data.get('status', 'ACTIVE')
         data['login_attempts'] = 0
         
-        # Add to Firestore
-        doc_id = add_document(COLLECTIONS['users'], data)
+        # Create document with custom ID
+        from utils.firebase_config import db
+        db.collection(COLLECTIONS['users']).document(user_id).set(data)
         
         return Response({
             'success': True,
+            'message': 'User created successfully',
             'data': {
-                'id': doc_id,
+                'id': user_id,
                 **data
             }
         }, status=status.HTTP_201_CREATED)
@@ -301,20 +404,27 @@ def list_menu_items(request):
 @api_view(['POST'])
 def create_menu_item(request):
     """
-    Create a new menu item
+    Create a new menu item with auto-generated ID
     POST /api/admin/menu
     """
     try:
         data = request.data
+        
+        # Generate next menu ID
+        menu_id = get_next_menu_id()
+        
         data['created_at'] = datetime.now().isoformat()
         data['available'] = data.get('available', True)
         
-        doc_id = add_document(COLLECTIONS['menu_items'], data)
+        # Create document with custom ID
+        from utils.firebase_config import db
+        db.collection(COLLECTIONS['menu_items']).document(menu_id).set(data)
         
         return Response({
             'success': True,
+            'message': 'Menu item created successfully',
             'data': {
-                'id': doc_id,
+                'id': menu_id,
                 **data
             }
         }, status=status.HTTP_201_CREATED)
@@ -373,35 +483,65 @@ def menu_item_detail(request, item_id):
 
 # ==================== ORDER MANAGEMENT ====================
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 def list_orders(request):
     """
-    List all orders with optional filtering
+    List all orders or create a new order
     GET /api/admin/orders?status=received&order_type=delivery
+    POST /api/admin/orders
     """
     try:
-        order_status = request.GET.get('status')
-        order_type = request.GET.get('order_type')
+        if request.method == 'GET':
+            order_status = request.GET.get('status')
+            order_type = request.GET.get('order_type')
+            
+            filters = []
+            if order_status:
+                filters.append(('orderStatus', '==', order_status))
+            if order_type:
+                filters.append(('orderType', '==', order_type))
+            
+            orders = query_collection(
+                COLLECTIONS['orders'],
+                filters=filters if filters else None,
+                order_by='createdAt'
+            )
+            
+            # Reverse to get newest first
+            orders.reverse()
+            
+            return Response({
+                'success': True,
+                'data': orders
+            })
         
-        filters = []
-        if order_status:
-            filters.append(('orderStatus', '==', order_status))  # Changed from 'status'
-        if order_type:
-            filters.append(('orderType', '==', order_type))  # Changed from 'order_type'
-        
-        orders = query_collection(
-            COLLECTIONS['orders'],
-            filters=filters if filters else None,
-            order_by='createdAt'  # Changed from 'created_at'
-        )
-        
-        # Reverse to get newest first
-        orders.reverse()
-        
-        return Response({
-            'success': True,
-            'data': orders
-        })
+        elif request.method == 'POST':
+            # Create new order with incremental ID
+            data = request.data
+            
+            # Generate next order ID
+            order_id = get_next_order_number()
+            
+            # Add timestamps
+            now = datetime.now()
+            data['createdAt'] = now.isoformat()
+            data['updated_at'] = now.isoformat()
+            data['dayKey'] = str(now.date())
+            
+            # Add default values if not provided
+            if 'orderStatus' not in data:
+                data['orderStatus'] = 'received'
+            
+            # Create document with custom ID
+            from utils.firebase_config import db
+            db.collection(COLLECTIONS['orders']).document(order_id).set(data)
+            
+            return Response({
+                'success': True,
+                'message': 'Order created successfully',
+                'data': {'id': order_id, **data}
+            }, status=status.HTTP_201_CREATED)
+    
     except Exception as e:
         return Response({
             'success': False,

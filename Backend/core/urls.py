@@ -39,16 +39,16 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    # Admin API (Firebase Firestore)
+    # Admin API (Firebase Firestore) - MAIN API
     path('api/admin/', include('admin_api.urls')),
     
-    # Other APIs
-    path('api/users/', include('users.urls')),
-    path('api/menu/', include('menu.urls')),
-    path('api/orders/', include('orders.urls')),
-    path('api/reports/', include('reports.urls')),
-    path('api/tracking/', include('tracking.urls')),
-    path('api/media/', include('media.urls')),
+    # Legacy APIs - DISABLED (incompatible with Firebase)
+    # path('api/users/', include('users.urls')),
+    # path('api/menu/', include('menu.urls')),
+    # path('api/orders/', include('orders.urls')),
+    # path('api/reports/', include('reports.urls')),
+    # path('api/tracking/', include('tracking.urls')),
+    # path('api/media/', include('media.urls')),
     
     # Authentication
     path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
