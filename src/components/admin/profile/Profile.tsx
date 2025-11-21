@@ -36,7 +36,7 @@ export const Profile: React.FC = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Load profile from API
+  // Load profile from API on mount
   useEffect(() => {
     loadProfile();
   }, []);

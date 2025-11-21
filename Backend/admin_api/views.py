@@ -1,15 +1,12 @@
 """
-Admin API Views
-Handles all admin-related endpoints for the restaurant management system
+Admin API Views - Using Django ORM with SQLite
 """
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from datetime import datetime, timedelta
-from utils.firebase_config import (
-    get_collection, query_collection, add_document,
-    update_document, delete_document, get_document, COLLECTIONS
-)
+from admin_api.models import User, MenuItem, Order, Category, Setting
+from django.db.models import Q, Sum, Count
 import hashlib
 from collections import defaultdict
 import re
@@ -18,41 +15,22 @@ import re
 # ==================== HELPER FUNCTIONS ====================
 
 def get_next_order_number():
-    """
-    Get the next available order number by finding the highest existing order ID
-    Returns: str like 'order101', 'order102', etc.
-    """
+    """Get the next available order number"""
     try:
-        orders = query_collection(COLLECTIONS['orders'])
-        
-        # Extract all numeric IDs from order documents
-        max_num = 0
-        for order in orders:
-            order_id = order.get('id', '')
-            # Match order001, order002, etc.
-            match = re.match(r'order(\d+)', order_id)
+        last_order = Order.objects.filter(id__startswith='order').order_by('-id').first()
+        if last_order:
+            match = re.match(r'order(\d+)', last_order.id)
             if match:
-                num = int(match.group(1))
-                max_num = max(max_num, num)
-        
-        # Return next number with padding
-        next_num = max_num + 1
-        return f"order{next_num:03d}"
-    except Exception as e:
-        print(f"Error getting next order number: {e}")
-        # Fallback to timestamp-based ID
-        return f"order_{int(datetime.now().timestamp())}"
+                next_num = int(match.group(1)) + 1
+                return f"order{next_num:03d}"
+        return "order001"
+    except:
+        return "order001"
 
 
 def get_next_user_id(role):
-    """
-    Get the next available user ID based on role
-    Returns: str like 'admin01', 'customer01', 'staff01', etc.
-    """
+    """Get the next available user ID based on role"""
     try:
-        users = query_collection(COLLECTIONS['users'])
-        
-        # Map roles to prefixes
         role_prefix_map = {
             'ADMIN': 'admin',
             'CUSTOMER': 'customer',
@@ -64,106 +42,78 @@ def get_next_user_id(role):
         }
         
         prefix = role_prefix_map.get(role.upper(), 'customer')
+        last_user = User.objects.filter(id__startswith=prefix).order_by('-id').first()
         
-        # Find max number for this prefix
-        max_num = 0
-        for user in users:
-            user_id = user.get('id', '')
-            # Match admin01, customer01, staff01, etc.
-            match = re.match(rf'{prefix}(\d+)', user_id)
+        if last_user:
+            match = re.match(rf'{prefix}(\d+)', last_user.id)
             if match:
-                num = int(match.group(1))
-                max_num = max(max_num, num)
-        
-        # Return next number with 2-digit padding
-        next_num = max_num + 1
-        return f"{prefix}{next_num:02d}"
-    except Exception as e:
-        print(f"Error getting next user ID: {e}")
-        # Fallback to timestamp-based ID
+                next_num = int(match.group(1)) + 1
+                return f"{prefix}{next_num:02d}"
+        return f"{prefix}01"
+    except:
         return f"user_{int(datetime.now().timestamp())}"
 
 
 def get_next_menu_id():
-    """
-    Get the next available menu item ID
-    Returns: str like 'menu001', 'menu002', etc.
-    """
+    """Get the next available menu item ID"""
     try:
-        menu_items = query_collection(COLLECTIONS['menu_items'])
-        
-        # Extract all numeric IDs from menu documents
-        max_num = 0
-        for item in menu_items:
-            item_id = item.get('id', '')
-            # Match menu001, menu002, etc.
-            match = re.match(r'menu(\d+)', item_id)
+        last_menu = MenuItem.objects.filter(id__startswith='menu').order_by('-id').first()
+        if last_menu:
+            match = re.match(r'menu(\d+)', last_menu.id)
             if match:
-                num = int(match.group(1))
-                max_num = max(max_num, num)
-        
-        # Return next number with 3-digit padding
-        next_num = max_num + 1
-        return f"menu{next_num:03d}"
-    except Exception as e:
-        print(f"Error getting next menu ID: {e}")
-        # Fallback to timestamp-based ID
-        return f"menu_{int(datetime.now().timestamp())}"
+                next_num = int(match.group(1)) + 1
+                return f"menu{next_num:03d}"
+        return "menu001"
+    except:
+        return "menu001"
 
 
 # ==================== DASHBOARD ====================
 
 @api_view(['GET'])
 def dashboard_stats(request):
-    """
-    Get dashboard statistics
-    GET /api/admin/dashboard/stats
-    """
+    """Get dashboard statistics"""
     try:
         # Get all orders
-        orders = query_collection(COLLECTIONS['orders'])
-        menu_items = query_collection(COLLECTIONS['menu_items'])
-        users = query_collection(COLLECTIONS['users'])
+        orders = Order.objects.all()
+        total_orders = orders.count()
+        total_revenue = orders.aggregate(Sum('totalFee'))['totalFee__sum'] or 0
         
-        # Calculate stats
-        total_orders = len(orders)
-        total_revenue = sum(float(order.get('totalFee', 0)) for order in orders)
-        
-        # Orders by status (using orderStatus field)
-        pending_orders = len([o for o in orders if o.get('orderStatus') == 'received'])
-        preparing_orders = len([o for o in orders if o.get('orderStatus') == 'preparing'])
-        ready_orders = len([o for o in orders if o.get('orderStatus') == 'ready'])
-        completed_orders = len([o for o in orders if o.get('orderStatus') in ['delivered', 'completed']])
+        # Orders by status
+        pending_orders = orders.filter(orderStatus='received').count()
+        preparing_orders = orders.filter(orderStatus='preparing').count()
+        ready_orders = orders.filter(orderStatus='ready').count()
+        completed_orders = orders.filter(Q(orderStatus='delivered') | Q(orderStatus='completed')).count()
         
         # Today's stats
         today = datetime.now().date()
         today_key = str(today)
-        today_orders = [o for o in orders if o.get('dayKey') == today_key]
-        today_revenue = sum(float(order.get('totalFee', 0)) for order in today_orders)
+        today_orders = orders.filter(dayKey=today_key)
+        today_revenue = today_orders.aggregate(Sum('totalFee'))['totalFee__sum'] or 0
         
         # Staff count
-        staff_count = len([u for u in users if u.get('role') in ['CHEF', 'CASHIER', 'WAITER', 'SECURITY_GUARD']])
+        staff_count = User.objects.filter(role__in=['CHEF', 'CASHIER', 'WAITER', 'SECURITY_GUARD']).count()
         
         # Calculate average order value
         avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
         
-        # Active customers (total users)
-        active_customers = len(users)
+        # Active customers
+        active_customers = User.objects.count()
         
         return Response({
             'success': True,
             'data': {
                 'total_orders': total_orders,
-                'total_revenue': total_revenue,
+                'total_revenue': float(total_revenue),
                 'pending_orders': pending_orders,
                 'preparing_orders': preparing_orders,
                 'ready_orders': ready_orders,
                 'completed_orders': completed_orders,
-                'today_orders': len(today_orders),
-                'today_revenue': today_revenue,
-                'total_menu_items': len(menu_items),
+                'today_orders': today_orders.count(),
+                'today_revenue': float(today_revenue),
+                'total_menu_items': MenuItem.objects.count(),
                 'total_staff': staff_count,
-                'total_users': len(users),
+                'total_users': User.objects.count(),
                 'active_customers': active_customers,
                 'avg_order_value': round(avg_order_value, 2),
             }
@@ -177,13 +127,8 @@ def dashboard_stats(request):
 
 @api_view(['GET'])
 def dashboard_charts(request):
-    """
-    Get data for dashboard charts
-    GET /api/admin/dashboard/charts
-    """
+    """Get data for dashboard charts"""
     try:
-        orders = query_collection(COLLECTIONS['orders'])
-        
         # Revenue by day (last 7 days)
         revenue_by_day = defaultdict(float)
         orders_by_day = defaultdict(int)
@@ -193,41 +138,20 @@ def dashboard_charts(request):
             revenue_by_day[str(date)] = 0
             orders_by_day[str(date)] = 0
         
-        for order in orders:
-            order_date = order.get('dayKey', '')
-            if order_date in revenue_by_day:
-                revenue_by_day[order_date] += float(order.get('totalFee', 0))
-                orders_by_day[order_date] += 1
+        # Get orders from last 7 days
+        recent_orders = Order.objects.filter(
+            dayKey__in=revenue_by_day.keys()
+        )
         
-        # Orders by type
-        orders_by_type = {
-            'DINE_IN': len([o for o in orders if o.get('order_type') == 'DINE_IN']),
-            'TAKEOUT': len([o for o in orders if o.get('order_type') == 'TAKEOUT']),
-            'DELIVERY': len([o for o in orders if o.get('order_type') == 'DELIVERY']),
-        }
-        
-        # Top menu items
-        item_counts = defaultdict(int)
-        for order in orders:
-            for item in order.get('items', []):
-                item_name = item.get('name', 'Unknown')
-                item_counts[item_name] += item.get('quantity', 0)
-        
-        top_items = sorted(item_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        for order in recent_orders:
+            revenue_by_day[order.dayKey] += float(order.totalFee)
+            orders_by_day[order.dayKey] += 1
         
         return Response({
             'success': True,
             'data': {
-                'revenue_chart': [
-                    {'date': date, 'revenue': revenue}
-                    for date, revenue in sorted(revenue_by_day.items())
-                ],
-                'orders_chart': [
-                    {'date': date, 'orders': count}
-                    for date, count in sorted(orders_by_day.items())
-                ],
-                'orders_by_type': orders_by_type,
-                'top_items': [{'name': name, 'count': count} for name, count in top_items]
+                'revenue_by_day': dict(revenue_by_day),
+                'orders_by_day': dict(orders_by_day),
             }
         })
     except Exception as e:
@@ -241,29 +165,42 @@ def dashboard_charts(request):
 
 @api_view(['GET'])
 def list_users(request):
-    """
-    List all users with optional filtering
-    GET /api/admin/users?role=CHEF&status=ACTIVE
-    """
+    """List all users with optional filtering"""
     try:
+        users = User.objects.all()
+        
+        # Apply filters
         role = request.GET.get('role')
         user_status = request.GET.get('status')
         
-        filters = []
         if role:
-            filters.append(('role', '==', role))
+            users = users.filter(role=role)
         if user_status:
-            filters.append(('status', '==', user_status))
+            users = users.filter(status=user_status)
         
-        users = query_collection(COLLECTIONS['users'], filters=filters if filters else None)
-        
-        # Remove password hashes from response
+        # Convert to dict
+        users_data = []
         for user in users:
-            user.pop('password_hash', None)
+            users_data.append({
+                'id': user.id,
+                'fullName': user.fullName,
+                'name': user.name,
+                'email': user.email,
+                'phoneNumber': user.phoneNumber,
+                'phone': user.phone,
+                'address': user.address,
+                'bio': user.bio,
+                'role': user.role,
+                'status': user.status,
+                'avatar': user.avatar,
+                'createdAt': user.createdAt.isoformat() if user.createdAt else None,
+                'created_at': user.created_at.isoformat() if user.created_at else None,
+                'lastLogin': user.lastLogin.isoformat() if user.lastLogin else None,
+            })
         
         return Response({
             'success': True,
-            'data': users
+            'data': users_data
         })
     except Exception as e:
         return Response({
@@ -274,38 +211,42 @@ def list_users(request):
 
 @api_view(['POST'])
 def create_user(request):
-    """
-    Create a new user with role-based ID
-    POST /api/admin/users
-    """
+    """Create a new user with role-based ID"""
     try:
         data = request.data
-        
-        # Get role for ID generation
         role = data.get('role', 'CUSTOMER')
         user_id = get_next_user_id(role)
         
-        # Hash password
+        # Hash password if provided
         password = data.get('password')
+        password_hash = ''
         if password:
-            data['password_hash'] = hashlib.sha256(password.encode()).hexdigest()
-            del data['password']
+            password_hash = hashlib.sha256(password.encode()).hexdigest()
         
-        # Set defaults
-        data['created_at'] = datetime.now().isoformat()
-        data['status'] = data.get('status', 'ACTIVE')
-        data['login_attempts'] = 0
-        
-        # Create document with custom ID
-        from utils.firebase_config import db
-        db.collection(COLLECTIONS['users']).document(user_id).set(data)
+        user = User.objects.create(
+            id=user_id,
+            fullName=data.get('fullName', data.get('name', '')),
+            name=data.get('name', data.get('fullName', '')),
+            email=data.get('email'),
+            phoneNumber=data.get('phoneNumber', data.get('phone', '')),
+            phone=data.get('phone', data.get('phoneNumber', '')),
+            address=data.get('address', ''),
+            bio=data.get('bio', ''),
+            role=role.upper(),
+            status=data.get('status', 'ACTIVE').upper(),
+            avatar=data.get('avatar', ''),
+            password_hash=password_hash,
+            login_attempts=0,
+        )
         
         return Response({
             'success': True,
             'message': 'User created successfully',
             'data': {
-                'id': user_id,
-                **data
+                'id': user.id,
+                'fullName': user.fullName,
+                'email': user.email,
+                'role': user.role,
             }
         }, status=status.HTTP_201_CREATED)
     except Exception as e:
@@ -317,38 +258,59 @@ def create_user(request):
 
 @api_view(['GET', 'PUT', 'DELETE'])
 def user_detail(request, user_id):
-    """
-    Get, update, or delete a user
-    GET/PUT/DELETE /api/admin/users/<id>
-    """
+    """Get, update, or delete a user"""
     try:
+        user = User.objects.get(id=user_id)
+        
         if request.method == 'GET':
-            doc = get_document(COLLECTIONS['users'], user_id)
-            if not doc.exists:
-                return Response({
-                    'success': False,
-                    'error': 'User not found'
-                }, status=status.HTTP_404_NOT_FOUND)
-            
-            user_data = {'id': doc.id, **doc.to_dict()}
-            user_data.pop('password_hash', None)
-            
             return Response({
                 'success': True,
-                'data': user_data
+                'data': {
+                    'id': user.id,
+                    'fullName': user.fullName,
+                    'name': user.name,
+                    'email': user.email,
+                    'phoneNumber': user.phoneNumber,
+                    'phone': user.phone,
+                    'address': user.address,
+                    'bio': user.bio,
+                    'role': user.role,
+                    'status': user.status,
+                    'avatar': user.avatar,
+                    'createdAt': user.createdAt.isoformat() if user.createdAt else None,
+                }
             })
         
         elif request.method == 'PUT':
             data = request.data
             
-            # Hash password if provided
+            # Update fields
+            if 'fullName' in data:
+                user.fullName = data['fullName']
+                user.name = data['fullName']
+            if 'name' in data:
+                user.name = data['name']
+            if 'email' in data:
+                user.email = data['email']
+            if 'phoneNumber' in data:
+                user.phoneNumber = data['phoneNumber']
+                user.phone = data['phoneNumber']
+            if 'phone' in data:
+                user.phone = data['phone']
+            if 'address' in data:
+                user.address = data['address']
+            if 'bio' in data:
+                user.bio = data['bio']
+            if 'role' in data:
+                user.role = data['role'].upper()
+            if 'status' in data:
+                user.status = data['status'].upper()
+            if 'avatar' in data:
+                user.avatar = data['avatar']
             if 'password' in data:
-                data['password_hash'] = hashlib.sha256(data['password'].encode()).hexdigest()
-                del data['password']
+                user.password_hash = hashlib.sha256(data['password'].encode()).hexdigest()
             
-            data['updated_at'] = datetime.now().isoformat()
-            
-            update_document(COLLECTIONS['users'], user_id, data)
+            user.save()
             
             return Response({
                 'success': True,
@@ -356,13 +318,17 @@ def user_detail(request, user_id):
             })
         
         elif request.method == 'DELETE':
-            delete_document(COLLECTIONS['users'], user_id)
-            
+            user.delete()
             return Response({
                 'success': True,
                 'message': 'User deleted successfully'
             })
     
+    except User.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'User not found'
+        }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({
             'success': False,
@@ -374,25 +340,39 @@ def user_detail(request, user_id):
 
 @api_view(['GET'])
 def list_menu_items(request):
-    """
-    List all menu items with optional filtering
-    GET /api/admin/menu?category=Main Course&available=true
-    """
+    """List all menu items with optional filtering"""
     try:
+        items = MenuItem.objects.all()
+        
+        # Apply filters
         category = request.GET.get('category')
         available = request.GET.get('available')
         
-        filters = []
         if category:
-            filters.append(('category', '==', category))
-        if available:
-            filters.append(('available', '==', available.lower() == 'true'))
+            items = items.filter(category=category)
+        if available is not None:
+            items = items.filter(available=available.lower() == 'true')
         
-        items = query_collection(COLLECTIONS['menu_items'], filters=filters if filters else None)
+        # Convert to dict
+        items_data = []
+        for item in items:
+            items_data.append({
+                'id': item.id,
+                'name': item.name,
+                'menuName': item.menuName,
+                'description': item.description,
+                'price': float(item.price),
+                'category': item.category,
+                'available': item.available,
+                'preparation_time': item.preparation_time,
+                'ingredients': item.ingredients,
+                'image_url': item.image_url,
+                'created_at': item.created_at.isoformat() if item.created_at else None,
+            })
         
         return Response({
             'success': True,
-            'data': items
+            'data': items_data
         })
     except Exception as e:
         return Response({
@@ -403,29 +383,31 @@ def list_menu_items(request):
 
 @api_view(['POST'])
 def create_menu_item(request):
-    """
-    Create a new menu item with auto-generated ID
-    POST /api/admin/menu
-    """
+    """Create a new menu item with auto-generated ID"""
     try:
         data = request.data
-        
-        # Generate next menu ID
         menu_id = get_next_menu_id()
         
-        data['created_at'] = datetime.now().isoformat()
-        data['available'] = data.get('available', True)
-        
-        # Create document with custom ID
-        from utils.firebase_config import db
-        db.collection(COLLECTIONS['menu_items']).document(menu_id).set(data)
+        menu_item = MenuItem.objects.create(
+            id=menu_id,
+            name=data.get('name', ''),
+            menuName=data.get('menuName', data.get('name', '')),
+            description=data.get('description', ''),
+            price=data.get('price', 0),
+            category=data.get('category', 'Other'),
+            available=data.get('available', True),
+            preparation_time=data.get('preparation_time', 15),
+            ingredients=data.get('ingredients', []),
+            image_url=data.get('image_url', ''),
+        )
         
         return Response({
             'success': True,
             'message': 'Menu item created successfully',
             'data': {
-                'id': menu_id,
-                **data
+                'id': menu_item.id,
+                'name': menu_item.name,
+                'price': float(menu_item.price),
             }
         }, status=status.HTTP_201_CREATED)
     except Exception as e:
@@ -437,29 +419,51 @@ def create_menu_item(request):
 
 @api_view(['GET', 'PUT', 'DELETE'])
 def menu_item_detail(request, item_id):
-    """
-    Get, update, or delete a menu item
-    GET/PUT/DELETE /api/admin/menu/<id>
-    """
+    """Get, update, or delete a menu item"""
     try:
+        item = MenuItem.objects.get(id=item_id)
+        
         if request.method == 'GET':
-            doc = get_document(COLLECTIONS['menu_items'], item_id)
-            if not doc.exists:
-                return Response({
-                    'success': False,
-                    'error': 'Menu item not found'
-                }, status=status.HTTP_404_NOT_FOUND)
-            
             return Response({
                 'success': True,
-                'data': {'id': doc.id, **doc.to_dict()}
+                'data': {
+                    'id': item.id,
+                    'name': item.name,
+                    'menuName': item.menuName,
+                    'description': item.description,
+                    'price': float(item.price),
+                    'category': item.category,
+                    'available': item.available,
+                    'preparation_time': item.preparation_time,
+                    'ingredients': item.ingredients,
+                    'image_url': item.image_url,
+                }
             })
         
         elif request.method == 'PUT':
             data = request.data
-            data['updated_at'] = datetime.now().isoformat()
             
-            update_document(COLLECTIONS['menu_items'], item_id, data)
+            if 'name' in data:
+                item.name = data['name']
+                item.menuName = data['name']
+            if 'menuName' in data:
+                item.menuName = data['menuName']
+            if 'description' in data:
+                item.description = data['description']
+            if 'price' in data:
+                item.price = data['price']
+            if 'category' in data:
+                item.category = data['category']
+            if 'available' in data:
+                item.available = data['available']
+            if 'preparation_time' in data:
+                item.preparation_time = data['preparation_time']
+            if 'ingredients' in data:
+                item.ingredients = data['ingredients']
+            if 'image_url' in data:
+                item.image_url = data['image_url']
+            
+            item.save()
             
             return Response({
                 'success': True,
@@ -467,13 +471,17 @@ def menu_item_detail(request, item_id):
             })
         
         elif request.method == 'DELETE':
-            delete_document(COLLECTIONS['menu_items'], item_id)
-            
+            item.delete()
             return Response({
                 'success': True,
                 'message': 'Menu item deleted successfully'
             })
     
+    except MenuItem.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Menu item not found'
+        }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({
             'success': False,
@@ -485,61 +493,66 @@ def menu_item_detail(request, item_id):
 
 @api_view(['GET', 'POST'])
 def list_orders(request):
-    """
-    List all orders or create a new order
-    GET /api/admin/orders?status=received&order_type=delivery
-    POST /api/admin/orders
-    """
+    """List all orders or create a new order"""
     try:
         if request.method == 'GET':
+            orders = Order.objects.all().order_by('-createdAt')
+            
+            # Apply filters
             order_status = request.GET.get('status')
             order_type = request.GET.get('order_type')
             
-            filters = []
             if order_status:
-                filters.append(('orderStatus', '==', order_status))
+                orders = orders.filter(orderStatus=order_status)
             if order_type:
-                filters.append(('orderType', '==', order_type))
+                orders = orders.filter(orderType=order_type)
             
-            orders = query_collection(
-                COLLECTIONS['orders'],
-                filters=filters if filters else None,
-                order_by='createdAt'
-            )
-            
-            # Reverse to get newest first
-            orders.reverse()
+            # Convert to dict
+            orders_data = []
+            for order in orders:
+                orders_data.append({
+                    'id': order.id,
+                    'fullName': order.fullName,
+                    'phoneNumber': order.phoneNumber,
+                    'address': order.address,
+                    'orderList': order.orderList,
+                    'totalFee': float(order.totalFee),
+                    'orderStatus': order.orderStatus,
+                    'orderType': order.orderType,
+                    'dayKey': order.dayKey,
+                    'createdAt': order.createdAt.isoformat() if order.createdAt else None,
+                })
             
             return Response({
                 'success': True,
-                'data': orders
+                'data': orders_data
             })
         
         elif request.method == 'POST':
-            # Create new order with incremental ID
             data = request.data
-            
-            # Generate next order ID
             order_id = get_next_order_number()
             
-            # Add timestamps
             now = datetime.now()
-            data['createdAt'] = now.isoformat()
-            data['updated_at'] = now.isoformat()
-            data['dayKey'] = str(now.date())
             
-            # Add default values if not provided
-            if 'orderStatus' not in data:
-                data['orderStatus'] = 'received'
-            
-            # Create document with custom ID
-            from utils.firebase_config import db
-            db.collection(COLLECTIONS['orders']).document(order_id).set(data)
+            order = Order.objects.create(
+                id=order_id,
+                fullName=data.get('fullName', 'Unknown'),
+                phoneNumber=data.get('phoneNumber', ''),
+                address=data.get('address', ''),
+                orderList=data.get('orderList', []),
+                totalFee=data.get('totalFee', 0),
+                orderStatus=data.get('orderStatus', 'received'),
+                orderType=data.get('orderType', 'DINE_IN'),
+                dayKey=str(now.date()),
+            )
             
             return Response({
                 'success': True,
                 'message': 'Order created successfully',
-                'data': {'id': order_id, **data}
+                'data': {
+                    'id': order.id,
+                    'totalFee': float(order.totalFee),
+                }
             }, status=status.HTTP_201_CREATED)
     
     except Exception as e:
@@ -551,35 +564,57 @@ def list_orders(request):
 
 @api_view(['GET', 'PUT'])
 def order_detail(request, order_id):
-    """
-    Get or update an order
-    GET/PUT /api/admin/orders/<id>
-    """
+    """Get or update an order"""
     try:
+        order = Order.objects.get(id=order_id)
+        
         if request.method == 'GET':
-            doc = get_document(COLLECTIONS['orders'], order_id)
-            if not doc.exists:
-                return Response({
-                    'success': False,
-                    'error': 'Order not found'
-                }, status=status.HTTP_404_NOT_FOUND)
-            
             return Response({
                 'success': True,
-                'data': {'id': doc.id, **doc.to_dict()}
+                'data': {
+                    'id': order.id,
+                    'fullName': order.fullName,
+                    'phoneNumber': order.phoneNumber,
+                    'address': order.address,
+                    'orderList': order.orderList,
+                    'totalFee': float(order.totalFee),
+                    'orderStatus': order.orderStatus,
+                    'orderType': order.orderType,
+                    'dayKey': order.dayKey,
+                    'createdAt': order.createdAt.isoformat() if order.createdAt else None,
+                }
             })
         
         elif request.method == 'PUT':
             data = request.data
-            data['updated_at'] = datetime.now().isoformat()
             
-            update_document(COLLECTIONS['orders'], order_id, data)
+            if 'fullName' in data:
+                order.fullName = data['fullName']
+            if 'phoneNumber' in data:
+                order.phoneNumber = data['phoneNumber']
+            if 'address' in data:
+                order.address = data['address']
+            if 'orderList' in data:
+                order.orderList = data['orderList']
+            if 'totalFee' in data:
+                order.totalFee = data['totalFee']
+            if 'orderStatus' in data:
+                order.orderStatus = data['orderStatus']
+            if 'orderType' in data:
+                order.orderType = data['orderType']
+            
+            order.save()
             
             return Response({
                 'success': True,
                 'message': 'Order updated successfully'
             })
     
+    except Order.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Order not found'
+        }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({
             'success': False,
@@ -589,28 +624,21 @@ def order_detail(request, order_id):
 
 @api_view(['PUT'])
 def update_order_status(request, order_id):
-    """
-    Update order status
-    PUT /api/admin/orders/<id>/status
-    """
+    """Update order status"""
     try:
-        new_status = request.data.get('status')
-        if not new_status:
-            return Response({
-                'success': False,
-                'error': 'Status is required'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Update with correct Firebase field name
-        update_document(COLLECTIONS['orders'], order_id, {
-            'orderStatus': new_status,  # Changed from 'status' to 'orderStatus'
-            'updatedAt': datetime.now().isoformat()  # Changed from 'updated_at'
-        })
+        order = Order.objects.get(id=order_id)
+        order.orderStatus = request.data.get('status', order.orderStatus)
+        order.save()
         
         return Response({
             'success': True,
-            'message': f'Order status updated to {new_status}'
+            'message': 'Order status updated successfully'
         })
+    except Order.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Order not found'
+        }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({
             'success': False,
@@ -622,391 +650,192 @@ def update_order_status(request, order_id):
 
 @api_view(['GET', 'POST'])
 def categories(request):
-    """
-    List or create categories
-    GET/POST /api/admin/categories
-    """
+    """List or create categories"""
     try:
         if request.method == 'GET':
-            cats = query_collection(COLLECTIONS['categories'])
-            return Response({
-                'success': True,
-                'data': cats
-            })
+            cats = Category.objects.all()
+            cats_data = [{'id': c.id, 'name': c.name, 'description': c.description} for c in cats]
+            return Response({'success': True, 'data': cats_data})
         
         elif request.method == 'POST':
             data = request.data
-            data['created_at'] = datetime.now().isoformat()
-            
-            doc_id = add_document(COLLECTIONS['categories'], data)
-            
-            return Response({
-                'success': True,
-                'data': {
-                    'id': doc_id,
-                    **data
-                }
-            }, status=status.HTTP_201_CREATED)
-    
+            cat = Category.objects.create(
+                id=data.get('id', data.get('name', '').lower().replace(' ', '_')),
+                name=data.get('name', ''),
+                description=data.get('description', ''),
+                display_order=data.get('display_order', 0)
+            )
+            return Response({'success': True, 'data': {'id': cat.id, 'name': cat.name}})
     except Exception as e:
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
 def category_detail(request, category_id):
-    """
-    Get, update, or delete a category
-    GET/PUT/DELETE /api/admin/categories/<id>
-    """
+    """Get, update, or delete a category"""
     try:
-        if request.method == 'GET':
-            doc = get_document(COLLECTIONS['categories'], category_id)
-            if not doc.exists:
-                return Response({
-                    'success': False,
-                    'error': 'Category not found'
-                }, status=status.HTTP_404_NOT_FOUND)
-            
-            return Response({
-                'success': True,
-                'data': {'id': doc.id, **doc.to_dict()}
-            })
+        cat = Category.objects.get(id=category_id)
         
+        if request.method == 'GET':
+            return Response({'success': True, 'data': {'id': cat.id, 'name': cat.name}})
         elif request.method == 'PUT':
             data = request.data
-            data['updated_at'] = datetime.now().isoformat()
-            
-            update_document(COLLECTIONS['categories'], category_id, data)
-            
-            return Response({
-                'success': True,
-                'message': 'Category updated successfully'
-            })
-        
+            if 'name' in data:
+                cat.name = data['name']
+            if 'description' in data:
+                cat.description = data['description']
+            cat.save()
+            return Response({'success': True, 'message': 'Category updated'})
         elif request.method == 'DELETE':
-            delete_document(COLLECTIONS['categories'], category_id)
-            
-            return Response({
-                'success': True,
-                'message': 'Category deleted successfully'
-            })
-    
+            cat.delete()
+            return Response({'success': True, 'message': 'Category deleted'})
+    except Category.DoesNotExist:
+        return Response({'success': False, 'error': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ==================== REPORTS & ANALYTICS ====================
 
 @api_view(['GET'])
 def sales_report(request):
-    """
-    Get sales report
-    GET /api/admin/reports/sales?start_date=2024-01-01&end_date=2024-12-31
-    """
+    """Get sales report"""
     try:
-        start_date = request.GET.get('start_date')
-        end_date = request.GET.get('end_date')
-        
-        orders = query_collection(COLLECTIONS['orders'])
-        
-        # Filter by date range if provided
-        if start_date and end_date:
-            orders = [
-                o for o in orders
-                if o.get('dayKey', '') and start_date <= o.get('dayKey', '') <= end_date
-            ]
-        
-        total_sales = sum(float(o.get('totalFee', 0)) for o in orders)
-        total_orders = len(orders)
-        
-        # Group by order type
-        by_type = defaultdict(lambda: {'count': 0, 'revenue': 0})
-        for order in orders:
-            order_type = order.get('orderType', 'UNKNOWN')
-            by_type[order_type]['count'] += 1
-            by_type[order_type]['revenue'] += float(order.get('totalFee', 0))
-        
-        # Group by status
-        by_status = defaultdict(int)
-        for order in orders:
-            by_status[order.get('orderStatus', 'UNKNOWN')] += 1
+        orders = Order.objects.all()
+        total_sales = orders.aggregate(Sum('totalFee'))['totalFee__sum'] or 0
         
         return Response({
             'success': True,
             'data': {
-                'total_sales': total_sales,
-                'total_orders': total_orders,
-                'average_order_value': total_sales / total_orders if total_orders > 0 else 0,
-                'by_type': dict(by_type),
-                'by_status': dict(by_status),
+                'total_sales': float(total_sales),
+                'total_orders': orders.count(),
             }
         })
     except Exception as e:
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
 def popular_items_report(request):
-    """
-    Get popular items report
-    GET /api/admin/reports/popular-items?limit=10
-    """
+    """Get popular menu items"""
     try:
-        limit_param = request.GET.get('limit', '10')
-        limit = int(limit_param)
-        
-        orders = query_collection(COLLECTIONS['orders'])
-        
-        # Count item occurrences
-        item_stats = defaultdict(lambda: {'count': 0, 'revenue': 0})
+        # Count items from orders
+        item_counts = defaultdict(int)
+        orders = Order.objects.all()
         
         for order in orders:
-            order_list = order.get('orderList', [])
-            if isinstance(order_list, list):
-                for item in order_list:
-                    item_name = item.get('menuName', 'Unknown')
-                    quantity = item.get('quantity', 1)
-                    price = float(item.get('price', 0))
-                    
-                    item_stats[item_name]['count'] += quantity
-                    item_stats[item_name]['revenue'] += quantity * price
+            for item in order.orderList:
+                item_name = item.get('menuName', item.get('name', 'Unknown'))
+                item_counts[item_name] += item.get('quantity', 1)
         
-        # Sort by count and limit
-        popular_items = sorted(
-            [
-                {'name': name, **stats}
-                for name, stats in item_stats.items()
-            ],
-            key=lambda x: x['count'],
-            reverse=True
-        )[:limit]
+        # Sort and get top 10
+        popular = sorted(item_counts.items(), key=lambda x: x[1], reverse=True)[:10]
         
         return Response({
             'success': True,
-            'data': popular_items
+            'data': [{'name': name, 'count': count} for name, count in popular]
         })
     except Exception as e:
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
 def revenue_trend(request):
-    """
-    Get revenue trend data for charts
-    GET /api/admin/reports/revenue-trend?days=30
-    """
+    """Get revenue trend over time"""
     try:
-        days_param = request.GET.get('days', '30')
-        days = int(days_param)
+        # Last 30 days
+        trend = []
+        for i in range(30):
+            date = (datetime.now().date() - timedelta(days=i))
+            day_key = str(date)
+            revenue = Order.objects.filter(dayKey=day_key).aggregate(Sum('totalFee'))['totalFee__sum'] or 0
+            trend.append({'date': day_key, 'revenue': float(revenue)})
         
-        orders = query_collection(COLLECTIONS['orders'])
+        trend.reverse()
         
-        # Group revenue by day
-        daily_revenue = defaultdict(float)
-        daily_orders = defaultdict(int)
-        
-        for order in orders:
-            day_key = order.get('dayKey', '')
-            if day_key:
-                daily_revenue[day_key] += float(order.get('totalFee', 0))
-                daily_orders[day_key] += 1
-        
-        # Sort by date and get last N days
-        sorted_days = sorted(daily_revenue.keys(), reverse=True)[:days]
-        sorted_days.reverse()  # Chronological order
-        
-        trend_data = [
-            {
-                'date': day,
-                'revenue': daily_revenue[day],
-                'orders': daily_orders[day]
-            }
-            for day in sorted_days
-        ]
-        
-        return Response({
-            'success': True,
-            'data': trend_data
-        })
+        return Response({'success': True, 'data': trend})
     except Exception as e:
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
 def category_sales(request):
-    """
-    Get sales by category
-    GET /api/admin/reports/category-sales
-    """
+    """Get sales by category"""
     try:
-        orders = query_collection(COLLECTIONS['orders'])
-        menu_items = query_collection(COLLECTIONS['menu_items'])
-        
-        # Create a mapping of menu item names to categories
-        menu_categories = {}
-        for item in menu_items:
-            menu_name = item.get('menuName', item.get('name', ''))
-            category = item.get('category', item.get('type', 'Other'))
-            if menu_name:
-                menu_categories[menu_name] = category
-        
-        # Calculate sales by category
-        category_stats = defaultdict(lambda: {'orders': 0, 'revenue': 0, 'count': 0})
+        category_totals = defaultdict(float)
+        orders = Order.objects.all()
         
         for order in orders:
-            order_list = order.get('orderList', [])
-            if isinstance(order_list, list):
-                for item in order_list:
-                    item_name = item.get('menuName', '')
-                    quantity = item.get('quantity', 1)
-                    price = float(item.get('price', 0))
-                    
-                    # Get category from menu items mapping
-                    category = menu_categories.get(item_name, 'Other')
-                    
-                    category_stats[category]['orders'] += 1
-                    category_stats[category]['count'] += quantity
-                    category_stats[category]['revenue'] += quantity * price
+            for item in order.orderList:
+                category = item.get('category', 'Other')
+                price = float(item.get('price', 0))
+                quantity = item.get('quantity', 1)
+                category_totals[category] += price * quantity
         
-        # Convert to list and calculate growth (mock data for now)
-        category_sales_list = [
-            {
-                'category': category,
-                'orders': stats['orders'],
-                'revenue': round(stats['revenue'], 2),
-                'growth': round((stats['orders'] / max(1, len(orders))) * 100, 1)  # Simple percentage
-            }
-            for category, stats in category_stats.items()
-        ]
+        data = [{'category': cat, 'total': total} for cat, total in category_totals.items()]
         
-        # Sort by revenue
-        category_sales_list.sort(key=lambda x: x['revenue'], reverse=True)
-        
-        return Response({
-            'success': True,
-            'data': category_sales_list
-        })
+        return Response({'success': True, 'data': data})
     except Exception as e:
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ==================== SETTINGS ====================
 
 @api_view(['GET', 'PUT'])
 def settings(request):
-    """
-    Get or update system settings
-    GET/PUT /api/admin/settings
-    """
+    """Get or update settings"""
     try:
         if request.method == 'GET':
-            settings_docs = query_collection(COLLECTIONS['settings'], limit=1)
-            
-            if settings_docs:
-                return Response({
-                    'success': True,
-                    'data': settings_docs[0]
-                })
-            else:
-                # Return default settings
-                return Response({
-                    'success': True,
-                    'data': {
-                        'restaurant_name': 'Restaurant Management System',
-                        'tax_rate': 0.12,
-                        'currency': 'PHP',
-                        'timezone': 'Asia/Manila'
-                    }
-                })
+            all_settings = Setting.objects.all()
+            settings_dict = {s.key: s.value for s in all_settings}
+            return Response({'success': True, 'data': settings_dict})
         
         elif request.method == 'PUT':
             data = request.data
-            data['updated_at'] = datetime.now().isoformat()
-            
-            # Get existing settings
-            settings_docs = query_collection(COLLECTIONS['settings'], limit=1)
-            
-            if settings_docs:
-                # Update existing
-                update_document(COLLECTIONS['settings'], settings_docs[0]['id'], data)
-            else:
-                # Create new
-                add_document(COLLECTIONS['settings'], data)
-            
-            return Response({
-                'success': True,
-                'message': 'Settings updated successfully'
-            })
-    
+            for key, value in data.items():
+                Setting.objects.update_or_create(key=key, defaults={'value': value})
+            return Response({'success': True, 'message': 'Settings updated'})
     except Exception as e:
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ==================== PROFILE ====================
 
 @api_view(['GET', 'PUT'])
 def profile(request):
-    """
-    Get or update admin profile
-    GET/PUT /api/admin/profile
-    """
+    """Get or update admin profile"""
     try:
-        # For now, use the first admin user or create a default one
-        # In production, this should use authenticated user from request.user
-        
         if request.method == 'GET':
-            # Get admin users
-            admins = query_collection(COLLECTIONS['users'], filters=[('role', '==', 'ADMIN')], limit=1)
+            # Get first admin user
+            admin = User.objects.filter(role='ADMIN').first()
             
-            if admins:
-                admin = admins[0]
+            if admin:
                 return Response({
                     'success': True,
                     'data': {
-                        'id': admin.get('id'),
-                        'name': admin.get('fullName', 'Admin User'),
-                        'email': admin.get('email', 'admin@restaurant.com'),
-                        'phone': admin.get('phoneNumber', ''),
-                        'address': admin.get('address', ''),
-                        'bio': admin.get('bio', ''),
-                        'role': admin.get('role', 'ADMIN'),
-                        'avatar': admin.get('avatar', ''),
-                        'createdAt': admin.get('createdAt', ''),
-                        'lastLogin': admin.get('lastLogin', ''),
+                        'id': admin.id,
+                        'name': admin.fullName or admin.name or 'Admin User',
+                        'email': admin.email or 'admin@restaurant.com',
+                        'phone': admin.phoneNumber or admin.phone or '',
+                        'address': admin.address or '',
+                        'bio': admin.bio or '',
+                        'role': admin.role or 'ADMIN',
+                        'avatar': admin.avatar or '',
+                        'createdAt': admin.createdAt.isoformat() if admin.createdAt else '',
+                        'lastLogin': admin.lastLogin.isoformat() if admin.lastLogin else '',
                     }
                 })
             else:
-                # Return default profile
+                # Return default if no admin exists
                 return Response({
                     'success': True,
                     'data': {
-                        'id': 'admin-1',
+                        'id': 'admin01',
                         'name': 'Admin User',
                         'email': 'admin@restaurant.com',
-                        'phone': '+1 (555) 123-4567',
-                        'address': '123 Main St, City, State 12345',
-                        'bio': 'Restaurant administrator',
+                        'phone': '',
+                        'address': '',
+                        'bio': '',
                         'role': 'ADMIN',
                         'avatar': '',
                         'createdAt': datetime.now().isoformat(),
@@ -1016,128 +845,58 @@ def profile(request):
         
         elif request.method == 'PUT':
             data = request.data
+            admin = User.objects.filter(role='ADMIN').first()
             
-            # Get admin users
-            admins = query_collection(COLLECTIONS['users'], filters=[('role', '==', 'ADMIN')], limit=1)
-            
-            update_data = {
-                'fullName': data.get('name'),
-                'email': data.get('email'),
-                'phoneNumber': data.get('phone'),
-                'address': data.get('address'),
-                'bio': data.get('bio'),
-                'avatar': data.get('avatar'),
-                'updatedAt': datetime.now().isoformat()
-            }
-            
-            # Remove None values
-            update_data = {k: v for k, v in update_data.items() if v is not None}
-            
-            if admins:
-                # Update existing admin
-                update_document(COLLECTIONS['users'], admins[0]['id'], update_data)
+            if admin:
+                if 'name' in data:
+                    admin.fullName = data['name']
+                    admin.name = data['name']
+                if 'email' in data:
+                    admin.email = data['email']
+                if 'phone' in data:
+                    admin.phoneNumber = data['phone']
+                    admin.phone = data['phone']
+                if 'address' in data:
+                    admin.address = data['address']
+                if 'bio' in data:
+                    admin.bio = data['bio']
+                if 'avatar' in data:
+                    admin.avatar = data['avatar']
                 
-                # Get updated document
-                doc = get_document(COLLECTIONS['users'], admins[0]['id'])
-                updated_admin = {'id': doc.id, **doc.to_dict()} if doc.exists else admins[0]
+                admin.save()
                 
-                return Response({
-                    'success': True,
-                    'message': 'Profile updated successfully',
-                    'data': {
-                        'id': updated_admin.get('id'),
-                        'name': updated_admin.get('fullName'),
-                        'email': updated_admin.get('email'),
-                        'phone': updated_admin.get('phoneNumber'),
-                        'address': updated_admin.get('address'),
-                        'bio': updated_admin.get('bio'),
-                        'role': updated_admin.get('role'),
-                        'avatar': updated_admin.get('avatar'),
-                    }
-                })
+                return Response({'success': True, 'message': 'Profile updated successfully'})
             else:
-                # Create new admin profile
-                new_admin = {
-                    'fullName': data.get('name', 'Admin User'),
-                    'email': data.get('email', 'admin@restaurant.com'),
-                    'phoneNumber': data.get('phone', ''),
-                    'address': data.get('address', ''),
-                    'bio': data.get('bio', ''),
-                    'role': 'ADMIN',
-                    'avatar': data.get('avatar', ''),
-                    'createdAt': datetime.now().isoformat(),
-                    'updatedAt': datetime.now().isoformat(),
-                }
-                
-                admin_id = add_document(COLLECTIONS['users'], new_admin)
-                
-                return Response({
-                    'success': True,
-                    'message': 'Profile created successfully',
-                    'data': {
-                        'id': admin_id,
-                        **new_admin
-                    }
-                })
+                return Response({'success': False, 'error': 'Admin user not found'}, status=status.HTTP_404_NOT_FOUND)
     
     except Exception as e:
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['PUT'])
+@api_view(['POST'])
 def change_password(request):
-    """
-    Change admin password
-    PUT /api/admin/profile/password
-    """
+    """Change admin password"""
     try:
-        current_password = request.data.get('current_password')
-        new_password = request.data.get('new_password')
+        data = request.data
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
         
-        if not current_password or not new_password:
-            return Response({
-                'success': False,
-                'error': 'Current password and new password are required'
-            }, status=status.HTTP_400_BAD_REQUEST)
+        admin = User.objects.filter(role='ADMIN').first()
         
-        if len(new_password) < 8:
-            return Response({
-                'success': False,
-                'error': 'Password must be at least 8 characters long'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Get admin users
-        admins = query_collection(COLLECTIONS['users'], filters=[('role', '==', 'ADMIN')], limit=1)
-        
-        if not admins:
-            return Response({
-                'success': False,
-                'error': 'Admin user not found'
-            }, status=status.HTTP_404_NOT_FOUND)
-        
-        admin = admins[0]
-        
-        # Verify current password (you should use proper password hashing)
-        # For now, we'll just update the password
-        # In production, use bcrypt or similar
-        
-        hashed_password = hashlib.sha256(new_password.encode()).hexdigest()
-        
-        update_document(COLLECTIONS['users'], admin['id'], {
-            'password': hashed_password,
-            'updatedAt': datetime.now().isoformat()
-        })
-        
-        return Response({
-            'success': True,
-            'message': 'Password changed successfully'
-        })
+        if admin:
+            # Verify current password
+            current_hash = hashlib.sha256(current_password.encode()).hexdigest()
+            
+            if admin.password_hash == current_hash or not admin.password_hash:
+                # Update password
+                admin.password_hash = hashlib.sha256(new_password.encode()).hexdigest()
+                admin.save()
+                
+                return Response({'success': True, 'message': 'Password changed successfully'})
+            else:
+                return Response({'success': False, 'error': 'Current password is incorrect'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'success': False, 'error': 'Admin user not found'}, status=status.HTTP_404_NOT_FOUND)
     
     except Exception as e:
-        return Response({
-            'success': False,
-            'error': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -34,7 +34,8 @@ export const MenuItemManagement: React.FC = () => {
           description: item.description || '',
           price: item.price || 0,
           category: item.category || 'Uncategorized',
-          availability: item.availabilityStatus === 'available' ? 'available' : 'out_of_stock',
+          // Fix: Check the 'available' boolean field from Firebase
+          availability: item.available === true || item.available === 'true' ? 'available' : 'out_of_stock',
           preparationTime: item.preparationTime || item.preparation_time || 15,
           ingredients: item.keywords || item.ingredients || [],
           image: item.imageUrl || item.image_url || ''
@@ -81,6 +82,7 @@ export const MenuItemManagement: React.FC = () => {
       // Transform data to match Firebase schema
       const menuData = {
         name: menuItem.name,
+        menuName: menuItem.name, // Add menuName for consistency
         description: menuItem.description,
         price: menuItem.price,
         category: menuItem.category,
@@ -94,14 +96,15 @@ export const MenuItemManagement: React.FC = () => {
         // Update existing item
         const response = await menuApi.update(menuItem.id, menuData);
         if (response.success) {
-          setMenuItems(menuItems.map((item) => (item.id === menuItem.id ? menuItem : item)));
+          // Refetch to get the latest data from Firebase
+          await fetchMenuItems();
         }
       } else {
         // Create new item
         const response = await menuApi.create(menuData);
         if (response.success) {
-          const newItem = { ...menuItem, id: response.data.id };
-          setMenuItems([...menuItems, newItem]);
+          // Refetch to get the latest data from Firebase
+          await fetchMenuItems();
         }
       }
       setIsModalOpen(false);
