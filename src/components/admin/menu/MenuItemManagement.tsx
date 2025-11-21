@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "../../common/Button.tsx";
 import { SearchBar } from "../../common/SearchBar.tsx";
@@ -6,73 +6,51 @@ import { MenuItemTable } from "./MenuItemTable.tsx";
 import { MenuItemModal } from "./MenuItemModal.tsx";
 import { THEME } from "../../../constants/theme";
 import type { MenuItem } from "../../../types/index.ts";
-
-// Mock data
-const mockMenuItems: MenuItem[] = [
-  {
-    id: "1",
-    name: "Classic Burger",
-    description: "Juicy beef patty with lettuce, tomato, and special sauce",
-    price: 12.99,
-    category: "Burgers",
-    availability: "available",
-    preparationTime: 15,
-    ingredients: ["Beef", "Lettuce", "Tomato", "Bun", "Special Sauce"],
-  },
-  {
-    id: "2",
-    name: "Margherita Pizza",
-    description: "Fresh mozzarella, basil, and tomato sauce",
-    price: 14.99,
-    category: "Pizza",
-    availability: "available",
-    preparationTime: 20,
-    ingredients: ["Dough", "Mozzarella", "Basil", "Tomato Sauce"],
-  },
-  {
-    id: "3",
-    name: "Caesar Salad",
-    description: "Crisp romaine with parmesan and croutons",
-    price: 9.99,
-    category: "Salads",
-    availability: "available",
-    preparationTime: 10,
-    ingredients: ["Romaine", "Parmesan", "Croutons", "Caesar Dressing"],
-  },
-  {
-    id: "4",
-    name: "Pasta Carbonara",
-    description: "Creamy pasta with bacon and parmesan",
-    price: 13.99,
-    category: "Pasta",
-    availability: "out_of_stock",
-    preparationTime: 18,
-    ingredients: ["Pasta", "Bacon", "Parmesan", "Cream", "Eggs"],
-  },
-  {
-    id: "5",
-    name: "Grilled Salmon",
-    description: "Fresh salmon with herbs and lemon",
-    price: 19.99,
-    category: "Seafood",
-    availability: "available",
-    preparationTime: 25,
-    ingredients: ["Salmon", "Herbs", "Lemon", "Olive Oil"],
-  },
-];
+import { menuApi } from "../../../services/apiservice";
 
 export const MenuItemManagement: React.FC = () => {
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(mockMenuItems);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(
-    null
-  );
+  const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterAvailability, setFilterAvailability] = useState<string>("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchMenuItems();
+  }, []);
+
+  const fetchMenuItems = async () => {
+    try {
+      setLoading(true);
+      const response = await menuApi.getAll();
+      if (response.success) {
+        // Transform Firebase data to match MenuItem interface
+        const items = response.data.map((item: any) => ({
+          id: item.id,
+          name: item.menuName || item.name,
+          description: item.description || '',
+          price: item.price || 0,
+          category: item.category || 'Uncategorized',
+          availability: item.availabilityStatus === 'available' ? 'available' : 'out_of_stock',
+          preparationTime: item.preparationTime || item.preparation_time || 15,
+          ingredients: item.keywords || item.ingredients || [],
+          image: item.imageUrl || item.image_url || ''
+        }));
+        setMenuItems(items);
+      }
+    } catch (err: any) {
+      console.error('Error fetching menu items:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const categories = Array.from(
-    new Set(mockMenuItems.map((item) => item.category))
+    new Set(menuItems.map((item) => item.category))
   );
 
   const handleAddMenuItem = () => {
@@ -85,21 +63,51 @@ export const MenuItemManagement: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteMenuItem = (menuItemId: string) => {
+  const handleDeleteMenuItem = async (menuItemId: string) => {
     if (window.confirm("Are you sure you want to delete this menu item?")) {
-      setMenuItems(menuItems.filter((item) => item.id !== menuItemId));
+      try {
+        const response = await menuApi.delete(menuItemId);
+        if (response.success) {
+          setMenuItems(menuItems.filter((item) => item.id !== menuItemId));
+        }
+      } catch (err: any) {
+        alert('Error deleting menu item: ' + err.message);
+      }
     }
   };
 
-  const handleSaveMenuItem = (menuItem: MenuItem) => {
-    if (selectedMenuItem) {
-      setMenuItems(
-        menuItems.map((item) => (item.id === menuItem.id ? menuItem : item))
-      );
-    } else {
-      setMenuItems([...menuItems, { ...menuItem, id: Date.now().toString() }]);
+  const handleSaveMenuItem = async (menuItem: MenuItem) => {
+    try {
+      // Transform data to match Firebase schema
+      const menuData = {
+        name: menuItem.name,
+        description: menuItem.description,
+        price: menuItem.price,
+        category: menuItem.category,
+        available: menuItem.availability === 'available',
+        preparation_time: menuItem.preparationTime,
+        ingredients: menuItem.ingredients || [],
+        image_url: menuItem.image || ''
+      };
+
+      if (selectedMenuItem) {
+        // Update existing item
+        const response = await menuApi.update(menuItem.id, menuData);
+        if (response.success) {
+          setMenuItems(menuItems.map((item) => (item.id === menuItem.id ? menuItem : item)));
+        }
+      } else {
+        // Create new item
+        const response = await menuApi.create(menuData);
+        if (response.success) {
+          const newItem = { ...menuItem, id: response.data.id };
+          setMenuItems([...menuItems, newItem]);
+        }
+      }
+      setIsModalOpen(false);
+    } catch (err: any) {
+      alert('Error saving menu item: ' + err.message);
     }
-    setIsModalOpen(false);
   };
 
   const filteredMenuItems = menuItems.filter((item) => {

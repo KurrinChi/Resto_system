@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Download } from "lucide-react";
 import { Button } from "../../common/Button";
 import { SearchBar } from "../../common/SearchBar";
@@ -7,85 +7,10 @@ import { OrderTable } from "./OrderTable.tsx";
 import { OrderModal } from "./OrderModal.tsx";
 import { THEME } from "../../../constants/theme";
 import type { Order } from "../../../types";
-
-// Mock data
-const mockOrders: Order[] = [
-  {
-    id: "1",
-    orderNumber: "ORD-2024-001",
-    customerId: "1",
-    customerName: "John Doe",
-    items: [
-      { menuItemId: "1", name: "Classic Burger", quantity: 2, price: 12.99 },
-      { menuItemId: "3", name: "Caesar Salad", quantity: 1, price: 9.99 },
-    ],
-    status: "preparing",
-    total: 35.97,
-    paymentStatus: "paid",
-    orderDate: "2024-10-21T10:30:00",
-    deliveryAddress: "123 Main St, Apt 4B",
-  },
-  {
-    id: "2",
-    orderNumber: "ORD-2024-002",
-    customerId: "2",
-    customerName: "Jane Smith",
-    items: [
-      { menuItemId: "2", name: "Margherita Pizza", quantity: 1, price: 14.99 },
-    ],
-    status: "ready",
-    total: 14.99,
-    paymentStatus: "paid",
-    orderDate: "2024-10-21T11:15:00",
-    deliveryAddress: "456 Oak Ave",
-  },
-  {
-    id: "3",
-    orderNumber: "ORD-2024-003",
-    customerId: "3",
-    customerName: "Bob Johnson",
-    items: [
-      { menuItemId: "5", name: "Grilled Salmon", quantity: 1, price: 19.99 },
-      { menuItemId: "3", name: "Caesar Salad", quantity: 1, price: 9.99 },
-    ],
-    status: "delivered",
-    total: 29.98,
-    paymentStatus: "paid",
-    orderDate: "2024-10-21T09:45:00",
-    deliveryAddress: "789 Pine Rd",
-  },
-  {
-    id: "4",
-    orderNumber: "ORD-2024-004",
-    customerId: "4",
-    customerName: "Alice Brown",
-    items: [
-      { menuItemId: "1", name: "Classic Burger", quantity: 3, price: 12.99 },
-    ],
-    status: "pending",
-    total: 38.97,
-    paymentStatus: "pending",
-    orderDate: "2024-10-21T12:00:00",
-    deliveryAddress: "321 Elm St",
-  },
-  {
-    id: "5",
-    orderNumber: "ORD-2024-005",
-    customerId: "5",
-    customerName: "Charlie Wilson",
-    items: [
-      { menuItemId: "4", name: "Pasta Carbonara", quantity: 2, price: 13.99 },
-    ],
-    status: "cancelled",
-    total: 27.98,
-    paymentStatus: "refunded",
-    orderDate: "2024-10-21T10:00:00",
-    notes: "Customer requested cancellation",
-  },
-];
+import { ordersApi } from "../../../services/apiservice";
 
 export const OrderManagement: React.FC = () => {
-  const [orders, setOrders] = useState<Order[]>(mockOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -93,21 +18,67 @@ export const OrderManagement: React.FC = () => {
   const [filterPayment, setFilterPayment] = useState<string>("all");
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await ordersApi.getAll();
+      if (response.success) {
+        // Transform Firebase data to match Order interface
+        const ordersData = response.data.map((order: any) => ({
+          id: order.id,
+          orderNumber: order.id || `ORD-${order.id.slice(0, 8)}`,
+          customerId: order.userId || order.guestInfo?.email || '',
+          customerName: order.customerName || order.guestInfo?.name || order.userId || 'Guest',
+          items: order.orderList?.map((item: any) => ({
+            menuItemId: item.menuId,
+            name: item.menuName,
+            quantity: item.quantity || 1,
+            price: item.price || item.unitPrice || 0,
+            specialInstructions: item.notes
+          })) || [],
+          status: order.orderStatus || 'pending',
+          total: order.totalFee || 0,
+          paymentStatus: order.paymentMethod === 'cod' ? 'pending' : 'paid',
+          orderDate: order.createdAt || order.dayKey,
+          deliveryAddress: order.deliveryAddress?.fullAddress || (order.tableNumber ? `Table ${order.tableNumber}` : ''),
+          notes: order.orderList?.[0]?.notes || ''
+        }));
+        setOrders(ordersData);
+      }
+    } catch (err: any) {
+      console.error('Error fetching orders:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
     setIsModalOpen(true);
   };
 
-  const handleUpdateOrderStatus = (
+  const handleUpdateOrderStatus = async (
     orderId: string,
     newStatus: Order["status"]
   ) => {
-    setOrders(
-      orders.map((order) =>
-        order.id === orderId ? { ...order, status: newStatus } : order
-      )
-    );
+    try {
+      const response = await ordersApi.updateStatus(orderId, newStatus);
+      if (response.success) {
+        setOrders(
+          orders.map((order) =>
+            order.id === orderId ? { ...order, status: newStatus } : order
+          )
+        );
+      }
+    } catch (err: any) {
+      alert('Error updating order status: ' + err.message);
+    }
   };
 
   const handleCancelOrder = (orderId: string) => {
@@ -115,21 +86,34 @@ export const OrderManagement: React.FC = () => {
     setIsCancelConfirmOpen(true);
   };
 
-  const handleConfirmCancel = () => {
+  const handleConfirmCancel = async () => {
     if (orderToCancel) {
-      setOrders(
-        orders.map((order) =>
-          order.id === orderToCancel
-            ? {
-                ...order,
-                status: "cancelled",
-                paymentStatus: order.paymentStatus === "paid" ? "refunded" : order.paymentStatus,
-              }
-            : order
-        )
-      );
-      setIsCancelConfirmOpen(false);
-      setOrderToCancel(null);
+      try {
+        // Update status to cancelled in Firebase
+        const response = await ordersApi.updateStatus(orderToCancel, 'cancelled');
+        
+        if (response.success) {
+          // Update local state
+          setOrders(
+            orders.map((order) =>
+              order.id === orderToCancel
+                ? {
+                    ...order,
+                    status: "cancelled",
+                    paymentStatus: order.paymentStatus === "paid" ? "refunded" : order.paymentStatus,
+                  }
+                : order
+            )
+          );
+        } else {
+          alert('Failed to cancel order');
+        }
+      } catch (err: any) {
+        alert('Error cancelling order: ' + err.message);
+      } finally {
+        setIsCancelConfirmOpen(false);
+        setOrderToCancel(null);
+      }
     }
   };
 

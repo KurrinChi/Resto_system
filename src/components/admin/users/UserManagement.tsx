@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "../../common/Button";
 import { SearchBar } from "../../common/SearchBar";
@@ -6,63 +6,52 @@ import { UserTable } from "./UserTable.tsx";
 import { UserModal } from "./UserModal.tsx";
 import { THEME } from "../../../constants/theme";
 import type { User } from "../../../types";
-
-// Mock data
-const mockUsers: User[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    role: "customer",
-    status: "active",
-    phone: "+1 (555) 123-4567",
-    dateJoined: "2024-01-15",
-  },
-  {
-    id: "2",
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    role: "staff",
-    status: "active",
-    phone: "+1 (555) 234-5678",
-    dateJoined: "2024-02-20",
-  },
-  {
-    id: "3",
-    name: "Bob Johnson",
-    email: "bob.johnson@example.com",
-    role: "manager",
-    status: "active",
-    phone: "+1 (555) 345-6789",
-    dateJoined: "2024-03-10",
-  },
-  {
-    id: "4",
-    name: "Alice Brown",
-    email: "alice.brown@example.com",
-    role: "customer",
-    status: "inactive",
-    phone: "+1 (555) 456-7890",
-    dateJoined: "2024-01-25",
-  },
-  {
-    id: "5",
-    name: "Charlie Wilson",
-    email: "charlie.wilson@example.com",
-    role: "customer",
-    status: "suspended",
-    phone: "+1 (555) 567-8901",
-    dateJoined: "2024-04-05",
-  },
-];
+import { usersApi } from "../../../services/apiservice";
 
 export const UserManagement: React.FC = () => {
-  const [users, setUsers] = useState<User[]>(mockUsers);
+  const [users, setUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [filterRole, setFilterRole] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await usersApi.getAll();
+      console.log('Users API Response:', response);
+      
+      if (response.success) {
+        // Transform Firebase data to match User interface
+        const usersData = response.data.map((user: any) => {
+          console.log('User data:', user);
+          return {
+            id: user.id,
+            name: user.fullName || user.full_name || user.username || user.email?.split('@')[0] || 'Unknown',
+            email: user.email || '',
+            role: (user.role || 'customer').toLowerCase(),
+            status: (user.status || 'active').toLowerCase(),
+            phone: user.phoneNumber || user.phone || '',
+            dateJoined: user.createdAt || user.created_at || new Date().toISOString().split('T')[0],
+            avatar: user.avatar || user.avatar_url || ''
+          };
+        });
+        console.log('Transformed users:', usersData);
+        setUsers(usersData);
+      }
+    } catch (err: any) {
+      console.error('Error fetching users:', err);
+      alert('Error loading users: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddUser = () => {
     setSelectedUser(null);
@@ -74,21 +63,53 @@ export const UserManagement: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteUser = (userId: string) => {
+  const handleDeleteUser = async (userId: string) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
-      setUsers(users.filter((user) => user.id !== userId));
+      try {
+        const response = await usersApi.delete(userId);
+        if (response.success) {
+          setUsers(users.filter((user) => user.id !== userId));
+        }
+      } catch (err: any) {
+        alert('Error deleting user: ' + err.message);
+      }
     }
   };
 
-  const handleSaveUser = (user: User) => {
-    if (selectedUser) {
-      // Edit existing user
-      setUsers(users.map((u) => (u.id === user.id ? user : u)));
-    } else {
-      // Add new user
-      setUsers([...users, { ...user, id: Date.now().toString() }]);
+  const handleSaveUser = async (user: User) => {
+    try {
+      // Transform data to match Firebase schema
+      const userData = {
+        username: user.email.split('@')[0],
+        full_name: user.name,
+        email: user.email,
+        role: user.role.toUpperCase(),
+        phone: user.phone || '',
+        status: user.status.toUpperCase()
+      };
+
+      if (selectedUser) {
+        // Edit existing user
+        const response = await usersApi.update(user.id, userData);
+        if (response.success) {
+          setUsers(users.map((u) => (u.id === user.id ? user : u)));
+        }
+      } else {
+        // Add new user (needs password for creation)
+        const newUserData = {
+          ...userData,
+          password: 'defaultPassword123' // Should prompt for password in modal
+        };
+        const response = await usersApi.create(newUserData);
+        if (response.success) {
+          const newUser = { ...user, id: response.data.id };
+          setUsers([...users, newUser]);
+        }
+      }
+      setIsModalOpen(false);
+    } catch (err: any) {
+      alert('Error saving user: ' + err.message);
     }
-    setIsModalOpen(false);
   };
 
   // Filter users based on search and filters

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 /** @jsxImportSource react */
 import {
@@ -18,12 +18,13 @@ import { useAdmin } from "../../../contexts/AdminContext";
 import { BRANDING } from "../../../constants/branding";
 import { THEME } from "../../../constants/theme";
 import { Avatar } from "../../common/Avatar";
+import { dashboardApi } from "../../../services/apiservice";
 
 interface MenuItem {
   path: string;
   label: string;
   icon: React.ReactNode;
-  badge?: number;
+  badgeKey?: string;
 }
 
 const menuItems: MenuItem[] = [
@@ -46,7 +47,7 @@ const menuItems: MenuItem[] = [
     path: "/admin/orders",
     label: "Orders",
     icon: <ShoppingCart className="w-5 h-5" />,
-    badge: 3,
+    badgeKey: 'pending_orders',
   },
   {
     path: "/admin/tracking",
@@ -71,6 +72,27 @@ export const Sidebar: React.FC = () => {
   const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const [showMobileProfileMenu, setShowMobileProfileMenu] =
     React.useState(false);
+  const [badges, setBadges] = useState<{[key: string]: number}>({});
+
+  useEffect(() => {
+    fetchBadgeCounts();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchBadgeCounts, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchBadgeCounts = async () => {
+    try {
+      const response = await dashboardApi.getStats();
+      if (response.success) {
+        setBadges({
+          pending_orders: response.data.pending_orders || 0
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching badge counts:', err);
+    }
+  };
 
   return (
     <>
@@ -186,7 +208,7 @@ export const Sidebar: React.FC = () => {
                   >
                     {item.label}
                   </span>
-                  {item.badge && (
+                  {item.badgeKey && badges[item.badgeKey] > 0 && (
                     <span
                       className="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full"
                       style={{
@@ -197,12 +219,12 @@ export const Sidebar: React.FC = () => {
                         opacity: isExpanded ? 1 : 0,
                       }}
                     >
-                      {item.badge}
+                      {badges[item.badgeKey]}
                     </span>
                   )}
                 </>
               )}
-              {!isExpanded && item.badge && (
+              {!isExpanded && item.badgeKey && badges[item.badgeKey] > 0 && (
                 <span
                   className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full"
                   style={{
@@ -210,7 +232,7 @@ export const Sidebar: React.FC = () => {
                     color: THEME.colors.text.primary,
                   }}
                 >
-                  {item.badge}
+                  {badges[item.badgeKey]}
                 </span>
               )}
             </NavLink>
@@ -229,6 +251,77 @@ export const Sidebar: React.FC = () => {
               style={{
                 backgroundColor: THEME.colors.background.secondary,
                 borderColor: THEME.colors.border.DEFAULT,
+              }}
+            >
+              <NavLink
+                to="/admin/profile"
+                onClick={() => setShowProfileMenu(false)}
+                className="flex items-center gap-3 px-4 py-3 transition-colors"
+                style={{ color: THEME.colors.text.primary }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    THEME.colors.background.hover;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+              >
+                <User className="w-4 h-4" />
+                <span className="text-sm">My Profile</span>
+              </NavLink>
+
+              <NavLink
+                to="/admin/settings"
+                onClick={() => setShowProfileMenu(false)}
+                className="flex items-center gap-3 px-4 py-3 transition-colors"
+                style={{ color: THEME.colors.text.primary }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    THEME.colors.background.hover;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+              >
+                <Settings className="w-4 h-4" />
+                <span className="text-sm">Settings</span>
+              </NavLink>
+
+              <div
+                style={{
+                  borderTop: `1px solid ${THEME.colors.border.DEFAULT}`,
+                }}
+              >
+                <button
+                  onClick={() => {
+                    setShowProfileMenu(false);
+                    console.log("Logout");
+                  }}
+                  className="flex items-center gap-3 px-4 py-3 w-full transition-colors"
+                  style={{ color: THEME.colors.status.error }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      THEME.colors.background.hover;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="text-sm">Logout</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Dropdown Menu - Shows above profile for collapsed state too */}
+          {showProfileMenu && !isExpanded && (
+            <div
+              className="absolute bottom-full left-3 right-3 mb-2 rounded-lg border overflow-hidden"
+              style={{
+                backgroundColor: THEME.colors.background.secondary,
+                borderColor: THEME.colors.border.DEFAULT,
+                width: '240px',
               }}
             >
               <NavLink
@@ -315,6 +408,7 @@ export const Sidebar: React.FC = () => {
               }}
             >
               <Avatar
+                key={adminUser?.avatar || adminUser?.name}
                 src={adminUser?.avatar}
                 name={adminUser?.name}
                 size="sm"
@@ -368,6 +462,7 @@ export const Sidebar: React.FC = () => {
                 {" "}
                 {/* Fixed container */}
                 <Avatar
+                  key={adminUser?.avatar || adminUser?.name}
                   src={adminUser?.avatar}
                   name={adminUser?.name}
                   size="sm"
@@ -496,7 +591,7 @@ export const Sidebar: React.FC = () => {
               <span className="text-sm font-medium flex-1 truncate">
                 {item.label}
               </span>
-              {item.badge && (
+              {item.badgeKey && badges[item.badgeKey] > 0 && (
                 <span
                   className="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full"
                   style={{
@@ -504,7 +599,7 @@ export const Sidebar: React.FC = () => {
                     color: THEME.colors.text.primary,
                   }}
                 >
-                  {item.badge}
+                  {badges[item.badgeKey]}
                 </span>
               )}
             </NavLink>
@@ -615,7 +710,12 @@ export const Sidebar: React.FC = () => {
               }
             }}
           >
-            <Avatar src={adminUser?.avatar} name={adminUser?.name} size="sm" />
+            <Avatar 
+              key={adminUser?.avatar || adminUser?.name}
+              src={adminUser?.avatar} 
+              name={adminUser?.name} 
+              size="sm" 
+            />
             <div className="flex-1 min-w-0 text-left">
               <p
                 className="text-sm font-medium truncate"

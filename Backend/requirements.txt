@@ -1,0 +1,7 @@
+Django>=5.2
+djangorestframework
+django-cors-headers
+drf-yasg
+firebase-admin
+markdown2
+fpdf

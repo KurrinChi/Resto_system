@@ -1,0 +1,12 @@
+[
+  {
+    "model": "reports.salesreport",
+    "pk": 1,
+    "fields": {"date": "2025-11-20", "total_sales": "8.99", "orders_count": 1, "average_order_value": "8.99"}
+  },
+  {
+    "model": "reports.menupopularity",
+    "pk": 1,
+    "fields": {"item_name": "Classic Burger", "item_id": 1, "total_orders": 1, "total_revenue": "8.99"}
+  }
+]

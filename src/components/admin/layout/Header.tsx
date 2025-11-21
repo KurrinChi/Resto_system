@@ -87,12 +87,17 @@ export const Header: React.FC = () => {
 
           {/* User Avatar - Static (No Hover) */}
           <div className="flex items-center gap-2 px-1.5 h-8">
-            <Avatar src={adminUser?.avatar} name={adminUser?.name} size="sm" />
+            <Avatar 
+              key={adminUser?.avatar || adminUser?.name} 
+              src={adminUser?.avatar} 
+              name={adminUser?.name} 
+              size="sm" 
+            />
             <span
               className="hidden lg:block text-xs font-medium"
               style={{ color: THEME.colors.text.primary }}
             >
-              {adminUser?.name?.split(" ")[0]}
+              {adminUser?.name?.split(" ")[0] || "Admin"}
             </span>
           </div>
         </div>

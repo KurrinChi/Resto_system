@@ -1,0 +1,17 @@
+[
+  {
+    "model": "orders.order",
+    "pk": 1,
+    "fields": {"user": 1, "order_type": "dine-in", "status": "received", "total": "8.99", "contact": "John Doe", "notes": "No onions."}
+  },
+  {
+    "model": "orders.orderlineitem",
+    "pk": 1,
+    "fields": {"order": 1, "item": 1, "variation": 1, "quantity": 1, "price": "8.99"}
+  },
+  {
+    "model": "orders.orderstatusevent",
+    "pk": 1,
+    "fields": {"order": 1, "status": "received", "actor": 1}
+  }
+]
