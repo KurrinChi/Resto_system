@@ -2,7 +2,7 @@ import React from 'react';
 import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
 import { Button } from '../../common/Button';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Phone, CreditCard, Calendar, User, Save, Upload } from 'lucide-react';
+import { MapPin, Phone, Calendar, User, Save, Upload } from 'lucide-react';
 import { Toast } from '../../common/Toast';
 
 export const ProfileEdit: React.FC = () => {
@@ -15,8 +15,7 @@ export const ProfileEdit: React.FC = () => {
   const [email, setEmail] = React.useState('');
   const [avatar, setAvatar] = React.useState('');
   const [contactNumber, setContactNumber] = React.useState('');
-  const [paymentMethod, setPaymentMethod] = React.useState('cod');
-  const [gender, setGender] = React.useState('');
+  // Removed paymentMethod and gender (deprecated fields)
   const [birthday, setBirthday] = React.useState('');
   
   // Validation error states
@@ -52,8 +51,7 @@ export const ProfileEdit: React.FC = () => {
       setEmail(userData.email || '');
       setAvatar(userData.avatar || '');
       setContactNumber(userData.contactNumber || '');
-      setPaymentMethod(userData.paymentMethod || 'cod');
-      setGender(userData.gender || '');
+      // paymentMethod / gender no longer used
       setBirthday(userData.birthday || '');
     } catch {
       // Fallback
@@ -125,8 +123,6 @@ export const ProfileEdit: React.FC = () => {
         email,
         avatar,
         contactNumber,
-        paymentMethod,
-        gender,
         birthday,
         address: localStorage.getItem('userAddress') || user?.address
       };
@@ -345,77 +341,7 @@ export const ProfileEdit: React.FC = () => {
           </div>
         </div>
 
-        {/* Payment Method */}
-        <div 
-          className="rounded-lg p-5"
-          style={{ backgroundColor: THEME.colors.background.secondary, border: `1px solid ${THEME.colors.border.DEFAULT}` }}
-        >
-          <div className="flex items-start gap-3">
-            <div 
-              className="p-2 rounded-lg flex-shrink-0"
-              style={{ backgroundColor: THEME.colors.primary.DEFAULT + '20' }}
-            >
-              <CreditCard className="w-5 h-5" style={{ color: THEME.colors.primary.DEFAULT }} />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold mb-2" style={{ color: THEME.colors.text.secondary }}>
-                Saved Payment Method
-              </h4>
-              <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border outline-none focus:ring-2"
-                style={{
-                  backgroundColor: THEME.colors.background.tertiary,
-                  borderColor: THEME.colors.border.DEFAULT,
-                  color: THEME.colors.text.primary,
-                  '--tw-ring-color': THEME.colors.primary.DEFAULT
-                } as React.CSSProperties}
-              >
-                <option value="cod">Cash on Delivery</option>
-                <option value="gcash">GCash</option>
-                <option value="paymaya">PayMaya</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Gender */}
-        <div 
-          className="rounded-lg p-5"
-          style={{ backgroundColor: THEME.colors.background.secondary, border: `1px solid ${THEME.colors.border.DEFAULT}` }}
-        >
-          <div className="flex items-start gap-3">
-            <div 
-              className="p-2 rounded-lg flex-shrink-0"
-              style={{ backgroundColor: THEME.colors.primary.DEFAULT + '20' }}
-            >
-              <User className="w-5 h-5" style={{ color: THEME.colors.primary.DEFAULT }} />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold mb-2" style={{ color: THEME.colors.text.secondary }}>
-                Gender
-              </h4>
-              <select
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border outline-none focus:ring-2"
-                style={{
-                  backgroundColor: THEME.colors.background.tertiary,
-                  borderColor: THEME.colors.border.DEFAULT,
-                  color: THEME.colors.text.primary,
-                  '--tw-ring-color': THEME.colors.primary.DEFAULT
-                } as React.CSSProperties}
-              >
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-                <option value="prefer_not_to_say">Prefer not to say</option>
-              </select>
-            </div>
-          </div>
-        </div>
+        {/* Deprecated sections (Payment Method, Gender) removed */}
 
         {/* Birthday */}
         <div 

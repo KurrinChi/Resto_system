@@ -69,17 +69,8 @@ export const Register: React.FC = () => {
         throw new Error(errorMsg);
       }
 
-      // Store user info locally for session
-      const userData = {
-        id: data.id,
-        fullName: fullName,
-        name: username.trim(),
-        email: email.trim(),
-        role: 'Customer',
-        phoneNumber: phone.trim(),
-      };
-      localStorage.setItem('rs_current_user', JSON.stringify(userData));
-      navigate('/client');
+      // Registration no longer auto-logs in; redirect to login
+      navigate('/login');
     } catch (err: any) {
       console.error('Registration error:', err);
       setError(err.message || 'Failed to register. Please check your connection and try again.');

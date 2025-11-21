@@ -2,46 +2,23 @@ import React from 'react';
 import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
 import { Button } from '../../common/Button';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Phone, CreditCard, Calendar, User, Edit } from 'lucide-react';
+import { MapPin, Phone, Calendar, User, Edit } from 'lucide-react';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     try {
-      const raw = localStorage.getItem('rs_current_user');
-      let userData = raw ? JSON.parse(raw) : null;
-      
-      // If no user found, create a demo user for display
-      if (!userData) {
-        userData = {
-          id: 'demo-user',
-          name: 'John Doe',
-          email: 'john.doe@example.com',
-          avatar: '',
-          contactNumber: '+63 912 345 6789',
-          paymentMethod: 'gcash',
-          gender: 'male',
-          birthday: '1990-05-15',
-          address: localStorage.getItem('userAddress') || 'Manila, Philippines'
-        };
-      }
-      
+      const rawSession = sessionStorage.getItem('rs_current_user');
+      const rawLocal = !rawSession ? localStorage.getItem('rs_current_user') : null;
+      const userData = rawSession ? JSON.parse(rawSession) : (rawLocal ? JSON.parse(rawLocal) : null);
       setUser(userData);
     } catch {
-      // Fallback demo user
-      setUser({
-        id: 'demo-user',
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        avatar: '',
-        contactNumber: '+63 912 345 6789',
-        paymentMethod: 'gcash',
-        gender: 'male',
-        birthday: '1990-05-15',
-        address: localStorage.getItem('userAddress') || 'Manila, Philippines'
-      });
+      setUser(null);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -62,23 +39,27 @@ export const ProfilePage: React.FC = () => {
     window.dispatchEvent(new Event('openMapModal'));
   };
 
-  const getPaymentMethodLabel = (method: string) => {
-    switch (method) {
-      case 'cod': return 'Cash on Delivery';
-      case 'gcash': return 'GCash';
-      case 'paymaya': return 'PayMaya';
-      default: return 'Not set';
-    }
-  };
+  // Removed payment method helper (feature deprecated)
+
+  if (loading) {
+    return <div style={{ color: THEME.colors.text.tertiary }}>Loading profile...</div>;
+  }
 
   if (!user) {
-    return <div style={{ color: THEME.colors.text.tertiary }}>Loading...</div>;
+    return (
+      <div className="space-y-4 max-w-xl mx-auto">
+        <h2 className="text-2xl font-bold" style={{ color: THEME.colors.text.primary }}>Profile</h2>
+        <div className="rounded-lg p-6 text-center" style={{ backgroundColor: THEME.colors.background.secondary, border: `1px solid ${THEME.colors.border.DEFAULT}` }}>
+          <p className="mb-4" style={{ color: THEME.colors.text.tertiary }}>You are not logged in.</p>
+          <Button onClick={() => navigate('/login')} style={{ backgroundColor: THEME.colors.primary.DEFAULT, color: 'white' }}>Go to Login</Button>
+        </div>
+      </div>
+    );
   }
 
   const address = user.address || localStorage.getItem('userAddress') || 'No address set';
-  const contactNumber = user.contactNumber || user.phone || 'Not set';
-  const paymentMethod = user.paymentMethod || 'cod';
-  const gender = user.gender || 'Not set';
+  const contactNumber = user.contactNumber || user.phoneNumber || user.phone || 'Not set';
+  // Removed paymentMethod and gender (deprecated fields)
   const birthday = user.birthday || 'Not set';
   const avatar = user.avatar || '';
 
@@ -194,51 +175,7 @@ export const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Payment Method */}
-        <div 
-          className="rounded-lg p-5"
-          style={{ backgroundColor: THEME.colors.background.secondary, border: `1px solid ${THEME.colors.border.DEFAULT}` }}
-        >
-          <div className="flex items-start gap-3">
-            <div 
-              className="p-2 rounded-lg flex-shrink-0"
-              style={{ backgroundColor: THEME.colors.primary.DEFAULT + '20' }}
-            >
-              <CreditCard className="w-5 h-5" style={{ color: THEME.colors.primary.DEFAULT }} />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold mb-1" style={{ color: THEME.colors.text.secondary }}>
-                Saved Payment Method
-              </h4>
-              <p className="text-base" style={{ color: THEME.colors.text.primary }}>
-                {getPaymentMethodLabel(paymentMethod)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Gender */}
-        <div 
-          className="rounded-lg p-5"
-          style={{ backgroundColor: THEME.colors.background.secondary, border: `1px solid ${THEME.colors.border.DEFAULT}` }}
-        >
-          <div className="flex items-start gap-3">
-            <div 
-              className="p-2 rounded-lg flex-shrink-0"
-              style={{ backgroundColor: THEME.colors.primary.DEFAULT + '20' }}
-            >
-              <User className="w-5 h-5" style={{ color: THEME.colors.primary.DEFAULT }} />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold mb-1" style={{ color: THEME.colors.text.secondary }}>
-                Gender
-              </h4>
-              <p className="text-base capitalize" style={{ color: THEME.colors.text.primary }}>
-                {gender}
-              </p>
-            </div>
-          </div>
-        </div>
+        {/* Deprecated sections (Payment Method, Gender) removed */}
 
         {/* Birthday */}
         <div 
@@ -268,26 +205,7 @@ export const ProfilePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Logout Button */}
-      <div className="flex justify-center pt-4">
-        <Button 
-          variant="danger"
-          onClick={() => {
-            if (confirm('Are you sure you want to logout?')) {
-              localStorage.removeItem('rs_current_user');
-              navigate('/client');
-              window.location.reload();
-            }
-          }}
-          style={{
-            backgroundColor: '#ef4444',
-            color: 'white',
-            padding: '0.75rem 2rem'
-          }}
-        >
-          Logout
-        </Button>
-      </div>
+
     </div>
   );
 };

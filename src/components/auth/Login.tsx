@@ -43,10 +43,27 @@ export const Login: React.FC = () => {
       }
 
       if (data.success) {
+        // Build session user object from response (with fallbacks)
+        const sessionUser = {
+          id: data.id || data.userId || `user_${Date.now()}`,
+          name: data.name || data.fullName || data.username || user,
+          email: data.email || user,
+          role: data.role || 'Customer',
+          phoneNumber: data.phoneNumber || data.phone || '',
+          avatar: data.avatar || ''
+        };
+        try {
+          sessionStorage.setItem('rs_current_user', JSON.stringify(sessionUser));
+          // Keep localStorage for legacy components that still read it (optional)
+          localStorage.setItem('rs_current_user', JSON.stringify(sessionUser));
+        } catch (storageErr) {
+          console.warn('Failed to persist session user:', storageErr);
+        }
+
         // Route based on role
-        if (data.role === 'Admin') {
+        if (sessionUser.role === 'Admin') {
           navigate('/admin');
-        } else if (data.role === 'Customer') {
+        } else if (sessionUser.role === 'Customer') {
           navigate('/client');
         } else {
           setError('Invalid user role');
