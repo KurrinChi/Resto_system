@@ -30,8 +30,11 @@ export const ProfileView: React.FC = () => {
           <Button onClick={() => navigate('/client/profile/edit')}>Edit Profile</Button>
           <Button variant="danger" onClick={() => {
             if (confirm('Are you sure you want to logout?')) {
-              localStorage.removeItem('rs_current_user');
-              navigate('/client');
+              try {
+                sessionStorage.removeItem('rs_current_user');
+                localStorage.removeItem('rs_current_user');
+              } catch {}
+              window.location.href = '/login';
             }
           }}>Logout</Button>
         </div>

@@ -9,6 +9,20 @@ export const Login: React.FC = () => {
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const navigate = useNavigate();
+  const [sessionUser, setSessionUser] = React.useState<any>(null);
+  const [checkingSession, setCheckingSession] = React.useState(true);
+
+  // If a session exists, offer to continue or switch accounts instead of auto-redirecting
+  React.useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('rs_current_user') || localStorage.getItem('rs_current_user');
+      setSessionUser(raw ? JSON.parse(raw) : null);
+    } catch {
+      setSessionUser(null);
+    } finally {
+      setCheckingSession(false);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +75,7 @@ export const Login: React.FC = () => {
         }
 
         // Route based on role
-        if (sessionUser.role === 'Admin') {
+        if (sessionUser.role === 'ADMIN') {
           navigate('/admin');
         } else if (sessionUser.role === 'Customer') {
           navigate('/client');
@@ -115,6 +129,46 @@ export const Login: React.FC = () => {
           style={{ backgroundColor: '#FFFFFF' }}
         >
         <div className="w-full max-w-md">
+          {/* Existing session notice */}
+          {!checkingSession && sessionUser && (
+            <div className="mb-6 rounded-lg p-4" style={{ backgroundColor: THEME.colors.background.secondary, border: `1px solid ${THEME.colors.border.DEFAULT}` }}>
+              <div className="mb-3">
+                <div className="text-sm" style={{ color: THEME.colors.text.tertiary }}>
+                  You are signed in as
+                </div>
+                <div className="text-base font-medium" style={{ color: THEME.colors.text.primary }}>
+                  {sessionUser.name || sessionUser.email} ({sessionUser.role})
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (sessionUser.role === 'Admin') navigate('/admin'); else navigate('/client');
+                  }}
+                  className="px-4 py-2 rounded-lg font-semibold"
+                  style={{ backgroundColor: THEME.colors.primary.DEFAULT, color: '#fff' }}
+                >
+                  Continue
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try { sessionStorage.removeItem('rs_current_user'); localStorage.removeItem('rs_current_user'); } catch {}
+                    setSessionUser(null);
+                  }}
+                  className="px-4 py-2 rounded-lg font-semibold border"
+                  style={{
+                    backgroundColor: THEME.colors.background.primary,
+                    borderColor: THEME.colors.border.DEFAULT,
+                    color: THEME.colors.text.primary
+                  }}
+                >
+                  Switch account
+                </button>
+              </div>
+            </div>
+          )}
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-2" style={{ color: THEME.colors.text.primary }}>
               Sign In

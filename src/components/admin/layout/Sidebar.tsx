@@ -295,8 +295,11 @@ export const Sidebar: React.FC = () => {
                 <button
                   onClick={() => {
                     setShowProfileMenu(false);
-                    localStorage.removeItem('rs_current_user');
-                    localStorage.removeItem('rs_admin_token');
+                    try {
+                      sessionStorage.removeItem('rs_current_user');
+                      localStorage.removeItem('rs_current_user');
+                      localStorage.removeItem('rs_admin_token');
+                    } catch {}
                     window.location.href = '/login';
                   }}
                   className="flex items-center gap-3 px-4 py-3 w-full transition-colors"
@@ -368,8 +371,11 @@ export const Sidebar: React.FC = () => {
                 <button
                   onClick={() => {
                     setShowProfileMenu(false);
-                    localStorage.removeItem('rs_current_user');
-                    localStorage.removeItem('rs_admin_token');
+                    try {
+                      sessionStorage.removeItem('rs_current_user');
+                      localStorage.removeItem('rs_current_user');
+                      localStorage.removeItem('rs_admin_token');
+                    } catch {}
                     window.location.href = '/login';
                   }}
                   className="flex items-center gap-3 px-4 py-3 w-full transition-colors"
@@ -675,8 +681,11 @@ export const Sidebar: React.FC = () => {
                 <button
                   onClick={() => {
                     setShowMobileProfileMenu(false);
-                    localStorage.removeItem('rs_current_user');
-                    localStorage.removeItem('rs_admin_token');
+                    try {
+                      sessionStorage.removeItem('rs_current_user');
+                      localStorage.removeItem('rs_current_user');
+                      localStorage.removeItem('rs_admin_token');
+                    } catch {}
                     window.location.href = '/login';
                   }}
                   className="flex items-center gap-3 px-4 py-3 w-full transition-colors"

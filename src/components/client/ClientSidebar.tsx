@@ -18,13 +18,16 @@ export const ClientSidebar: React.FC = () => {
 
   const handleLogout = () => {
     // Clear any stored user data
-    localStorage.removeItem('userAddress');
-    localStorage.removeItem('orderType');
-    localStorage.removeItem('rs_cart_v1');
-    localStorage.removeItem('rs_current_user');
+    try {
+      sessionStorage.removeItem('rs_current_user');
+      localStorage.removeItem('rs_current_user');
+      localStorage.removeItem('userAddress');
+      localStorage.removeItem('orderType');
+      localStorage.removeItem('rs_cart_v1');
+    } catch {}
     
-    // Navigate to login page
-    navigate('/login');
+    // Force full page reload to reset login state
+    window.location.href = '/login';
   };
 
   return (
