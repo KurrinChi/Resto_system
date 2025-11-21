@@ -21,9 +21,10 @@ export const ClientSidebar: React.FC = () => {
     localStorage.removeItem('userAddress');
     localStorage.removeItem('orderType');
     localStorage.removeItem('rs_cart_v1');
+    localStorage.removeItem('rs_current_user');
     
-    // Navigate to login or home page
-    navigate('/');
+    // Navigate to login page
+    navigate('/login');
   };
 
   return (

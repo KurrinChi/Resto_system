@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
+import { CLIENT_THEME as THEME } from '../../constants/clientTheme';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 
 type User = {
