@@ -3,6 +3,7 @@ import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
 import { Button } from '../../common/Button';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Phone, CreditCard, Calendar, User, Edit } from 'lucide-react';
+import { clearSession } from '../../../services/authService';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -274,7 +275,7 @@ export const ProfilePage: React.FC = () => {
           variant="danger"
           onClick={() => {
             if (confirm('Are you sure you want to logout?')) {
-              localStorage.removeItem('rs_current_user');
+              clearSession();
               navigate('/client');
               window.location.reload();
             }

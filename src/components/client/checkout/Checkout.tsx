@@ -7,6 +7,7 @@ import { Input } from '../../common/Input';
 import { Toast } from '../../common/Toast';
 import { useCart } from '../cart/CartContext';
 import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
+import { ordersApi } from '../../../services/apiservice';
 
 const PLACEHOLDER_IMG = new URL('../../../assets/placeholder.png', import.meta.url).href;
 
@@ -119,7 +120,7 @@ const Checkout: React.FC = () => {
     setSelectedDate(date);
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (items.length === 0) {
       alert('Your cart is empty!');
       return;
@@ -138,32 +139,50 @@ const Checkout: React.FC = () => {
       }
     }
 
-    // Prepare order data
-    const orderData = {
-      items,
-      deliveryAddress,
-      noteToDriver,
-      deliveryOption,
-      scheduledDate: deliveryOption === 'scheduled' ? selectedDate : null,
-      scheduledTime: deliveryOption === 'scheduled' ? selectedTimeSlot : null,
-      paymentMethod,
-      subtotal: total,
-      total: total,
-      orderDate: new Date().toISOString(),
-    };
+    try {
+      // Get current user or guest
+      const currentUser = JSON.parse(localStorage.getItem('rs_current_user') || 'null');
+      const guestId = localStorage.getItem('rs_guest_id');
 
-    console.log('Order placed:', orderData);
-    
-    // Clear cart
-    clearCart();
-    
-    // Show success toast
-    setToastMessage('Order Successfully Created');
-    
-    // Navigate to orders page after delay
-    setTimeout(() => {
-      navigate('/client/orders');
-    }, 2000);
+      // Prepare order data for Firebase
+      const orderData = {
+        items: items.map(item => ({
+          name: item.name,
+          quantity: item.qty,
+          price: item.price,
+        })),
+        orderType: orderType === 'delivery' ? 'DELIVERY' : 'DINE_IN',
+        deliveryAddress: orderType === 'delivery' ? deliveryAddress : '',
+        notes: noteToDriver,
+        paymentMethod,
+        subtotal: total,
+        total: total,
+        contact: currentUser?.email || currentUser?.username || 'Guest',
+        userId: currentUser?.id || null,
+        guest_id: guestId || null,
+      };
+
+      // Save to Firebase via admin API
+      const result = await ordersApi.create(orderData);
+
+      if (result.success) {
+        // Clear cart
+        clearCart();
+        
+        // Show success toast
+        setToastMessage('Order Successfully Created');
+        
+        // Navigate to orders page after delay
+        setTimeout(() => {
+          navigate('/client/orders');
+        }, 2000);
+      } else {
+        alert('Failed to place order: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Order placement error:', error);
+      alert('Failed to place order. Please try again.');
+    }
   };
 
   const subtotal = total;

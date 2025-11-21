@@ -1,90 +1,85 @@
 import React from 'react';
 import { Card } from '../../common/Card';
 import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
-import { useCart } from '../cart/CartContext';
 import { Package, Search, Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ordersApi } from '../../../services/apiservice';
 
-// Mock data for demonstration
-const mockOrders = [
-  {
-    id: "ORD-20251110-001",
-    items: [
-      { id: 1, name: "Burger Deluxe", price: 100, qty: 1 },
-      { id: 2, name: "Iced Tea", price: 50, qty: 2 }
-    ],
-    total: 200,
-    type: "delivery" as const,
-    status: "completed" as const,
-    createdAt: "2025-11-10T10:30:00"
-  },
-  {
-    id: "ORD-20251110-002",
-    items: [
-      { id: 3, name: "Classic Pizza", price: 250, qty: 1 },
-      { id: 4, name: "Chicken Wings", price: 150, qty: 1 }
-    ],
-    total: 400,
-    type: "pickup" as const,
-    status: "preparing" as const,
-    createdAt: "2025-11-10T11:15:00"
-  },
-  {
-    id: "ORD-20251109-003",
-    items: [
-      { id: 5, name: "Caesar Salad", price: 120, qty: 2 },
-      { id: 6, name: "Pasta Carbonara", price: 180, qty: 1 }
-    ],
-    total: 420,
-    type: "delivery" as const,
-    status: "out_for_delivery" as const,
-    createdAt: "2025-11-09T18:45:00"
-  },
-  {
-    id: "ORD-20251109-004",
-    items: [
-      { id: 7, name: "Veggie Wrap", price: 85, qty: 3 },
-      { id: 8, name: "Fresh Juice", price: 60, qty: 3 }
-    ],
-    total: 435,
-    type: "pickup" as const,
-    status: "ready" as const,
-    createdAt: "2025-11-09T13:20:00"
-  },
-  {
-    id: "ORD-20251108-005",
-    items: [
-      { id: 9, name: "Margherita Pizza", price: 220, qty: 1 },
-      { id: 10, name: "Greek Salad", price: 130, qty: 1 },
-      { id: 11, name: "Garlic Bread", price: 70, qty: 2 }
-    ],
-    total: 490,
-    type: "delivery" as const,
-    status: "completed" as const,
-    createdAt: "2025-11-08T19:30:00"
-  },
-  {
-    id: "ORD-20251108-006",
-    items: [
-      { id: 12, name: "Beef Burger", price: 95, qty: 2 },
-      { id: 13, name: "French Fries", price: 55, qty: 2 },
-      { id: 14, name: "Soda", price: 40, qty: 2 }
-    ],
-    total: 380,
-    type: "pickup" as const,
-    status: "received" as const,
-    createdAt: "2025-11-08T12:00:00"
-  }
-];
+type OrderItem = {
+  name: string;
+  quantity: number;
+  price: number;
+  qty?: number;
+};
+
+type Order = {
+  id: string;
+  items: OrderItem[];
+  total: number;
+  totalFee?: number;
+  type: string;
+  orderType?: string;
+  status: string;
+  orderStatus?: string;
+  createdAt: string;
+  deliveryAddress?: string;
+  contact?: string;
+};
 
 export const OrderHistory: React.FC = () => {
-  const { getOrders } = useCart();
-  const cartOrders = getOrders();
-  
   // Filter states
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedDate, setSelectedDate] = React.useState('');
   const [showCalendar, setShowCalendar] = React.useState(false);
   const [currentMonth, setCurrentMonth] = React.useState(new Date());
+  const [orders, setOrders] = React.useState<Order[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  // Fetch orders from Firebase
+  React.useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setLoading(true);
+        const currentUser = JSON.parse(localStorage.getItem('rs_current_user') || 'null');
+        const guestId = localStorage.getItem('rs_guest_id');
+
+        // Fetch all orders (in real app, filter by user/guest on backend)
+        const response = await ordersApi.getAll();
+        
+        if (response.success && response.data) {
+          // Filter orders by current user or guest
+          let userOrders = response.data;
+          if (currentUser?.id) {
+            userOrders = response.data.filter((o: any) => o.userId === currentUser.id.toString());
+          } else if (guestId) {
+            userOrders = response.data.filter((o: any) => o.guestId === guestId);
+          }
+
+          // Transform Firebase order format to component format
+          const transformedOrders = userOrders.map((order: any) => ({
+            id: order.id || order.name,
+            items: (order.items || []).map((item: any) => ({
+              name: item.name,
+              price: parseFloat(item.price || 0),
+              qty: item.quantity || item.qty || 1,
+            })),
+            total: parseFloat(order.totalFee || order.total || 0),
+            type: (order.orderType || order.type || 'delivery').toLowerCase(),
+            status: (order.orderStatus || order.status || 'received').toLowerCase(),
+            createdAt: order.createdAt || order.created_at || new Date().toISOString(),
+            deliveryAddress: order.deliveryAddress || '',
+            contact: order.contact || '',
+          }));
+          
+          setOrders(transformedOrders);
+        }
+      } catch (error) {
+        console.error('Failed to fetch orders:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+  }, []);
 
   // Animation styles
   React.useEffect(() => {
@@ -113,11 +108,8 @@ export const OrderHistory: React.FC = () => {
     };
   }, []);
   
-  // Combine cart orders with mock data for demonstration
-  const allOrders = cartOrders.length > 0 ? cartOrders : mockOrders;
-  
   // Filter orders based on search query and date
-  const orders = allOrders.filter(order => {
+  const filteredOrders = orders.filter(order => {
     // Filter by Order ID
     const matchesSearch = searchQuery.trim() === '' || 
       order.id.toLowerCase().includes(searchQuery.toLowerCase());
@@ -209,7 +201,21 @@ export const OrderHistory: React.FC = () => {
 
   const hasFilters = searchQuery.trim() !== '' || selectedDate !== '';
 
-  if (orders.length === 0) {
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold" style={{ color: THEME.colors.text.primary }}>
+          Order History
+        </h2>
+        <div className="min-h-[400px] flex flex-col items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mb-4" style={{ borderColor: THEME.colors.primary.DEFAULT }}></div>
+          <p className="text-sm" style={{ color: THEME.colors.text.tertiary }}>Loading orders...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (filteredOrders.length === 0) {
     return (
       <div className="space-y-6">
         {/* Search and Filter Section */}
@@ -510,7 +516,7 @@ export const OrderHistory: React.FC = () => {
       </h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {orders.map((order, index) => {
+        {filteredOrders.map((order, index) => {
           const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
           
           return (

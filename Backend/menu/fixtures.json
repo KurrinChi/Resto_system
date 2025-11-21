@@ -2,16 +2,35 @@
   {
     "model": "menu.category",
     "pk": 1,
-    "fields": {"name": "Burgers"}
+    "fields": {
+      "name": "Burgers",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
   },
   {
     "model": "menu.menuitem",
     "pk": 1,
-    "fields": {"category": 1, "name": "Classic Burger", "description": "A classic beef burger.", "active": true}
+    "fields": {
+      "category": 1,
+      "name": "Classic Burger",
+      "description": "A classic beef burger.",
+      "active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
   },
   {
     "model": "menu.itemvariation",
     "pk": 1,
-    "fields": {"item": 1, "label": "Regular", "price": "8.99", "sku": "BURGER-REG", "available": true}
+    "fields": {
+      "item": 1,
+      "label": "Regular",
+      "price": "8.99",
+      "sku": "BURGER-REG",
+      "available": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
   }
 ]

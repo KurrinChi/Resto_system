@@ -18,13 +18,18 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
     TokenRefreshView,
     TokenVerifyView,
 )
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework import permissions
+from users.views import (
+    RegisterView,
+    CurrentUserView,
+    GuestSessionView,
+    EmailOrUsernameTokenObtainPairView,
+)
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -51,9 +56,12 @@ urlpatterns = [
     path('api/media/', include('media.urls')),
     
     # Authentication
-    path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/auth/token/', EmailOrUsernameTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path('api/auth/register/', RegisterView.as_view(), name='register'),
+    path('api/auth/me/', CurrentUserView.as_view(), name='current_user'),
+    path('api/auth/guest/', GuestSessionView.as_view(), name='guest_session'),
     
     # API Documentation
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

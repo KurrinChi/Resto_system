@@ -1,33 +1,71 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
-import { Mail, Lock, ArrowRight } from 'lucide-react';
-
-type User = {
-  id: string;
-  username: string;
-  email: string;
-  password: string;
-};
-
-const UsersKey = 'rs_users_v1';
+import { Mail, Lock, ArrowRight, UserPlus } from 'lucide-react';
+import { authService, persistSession } from '../../../services/authService';
 
 export const Login: React.FC = () => {
   const [user, setUser] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [guestLoading, setGuestLoading] = React.useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const raw = localStorage.getItem(UsersKey);
-    const users: User[] = raw ? JSON.parse(raw) : [];
-    const found = users.find((u) => u.username === user || u.email === user);
-    if (!found) return setError('User not found');
-    if (found.password !== password) return setError('Incorrect password');
-    localStorage.setItem('rs_current_user', JSON.stringify(found));
-    navigate('/client');
+    setLoading(true);
+
+    try {
+      const data = await authService.login(user, password);
+      persistSession(data);
+      navigate('/client');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      let errorMessage = 'Unable to sign in. Please check your credentials.';
+      
+      if (err?.response) {
+        const status = err.response.status;
+        const data = err.response.data;
+        
+        if (status === 401) {
+          // Try to get specific error message from Firebase backend
+          errorMessage = 
+            data?.error ||
+            data?.detail ||
+            data?.non_field_errors?.[0] ||
+            data?.message ||
+            'Invalid username/email or password. Please try again.';
+        } else if (status === 400) {
+          errorMessage = data?.error || data?.detail || data?.non_field_errors?.[0] || 'Invalid request. Please check your input.';
+        } else if (status === 500) {
+          errorMessage = data?.error || 'Server error. Please try again later.';
+        }
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGuestCheckout = async () => {
+    setError(null);
+    setGuestLoading(true);
+    try {
+      const session = await authService.createGuestSession();
+      localStorage.setItem('rs_guest_id', session.guest_id);
+      localStorage.removeItem('rs_current_user');
+      localStorage.removeItem('rs_tokens');
+      navigate('/client');
+    } catch {
+      setError('Unable to start a guest session. Please try again.');
+    } finally {
+      setGuestLoading(false);
+    }
   };
 
   return (
@@ -149,7 +187,7 @@ export const Login: React.FC = () => {
                 color: '#FFFFFF'
               }}
             >
-              Sign In
+              {loading ? 'Signing In...' : 'Sign In'}
               <ArrowRight className="w-5 h-5" />
             </button>
 
@@ -185,6 +223,20 @@ export const Login: React.FC = () => {
               }}
             >
               Create an Account
+            </button>
+
+            <button
+              type="button"
+              onClick={handleGuestCheckout}
+              className="w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 border-2 transition-all"
+              style={{
+                borderColor: THEME.colors.border.DEFAULT,
+                color: THEME.colors.text.primary,
+              }}
+              disabled={guestLoading}
+            >
+              <UserPlus className="w-5 h-5" />
+              {guestLoading ? 'Preparing Guest Session...' : 'Continue as Guest'}
             </button>
           </form>
         </div>

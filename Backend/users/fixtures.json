@@ -12,6 +12,15 @@
   {
     "model": "users.address",
     "pk": 1,
-    "fields": {"user": 1, "line1": "123 Main St", "city": "Metro City", "province": "Metro", "postal": "12345", "is_default": true}
+    "fields": {
+      "user": 1,
+      "line1": "123 Main St",
+      "city": "Metro City",
+      "province": "Metro",
+      "postal": "12345",
+      "is_default": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
   }
 ]

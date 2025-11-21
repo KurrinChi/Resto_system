@@ -2,7 +2,16 @@
   {
     "model": "orders.order",
     "pk": 1,
-    "fields": {"user": 1, "order_type": "dine-in", "status": "received", "total": "8.99", "contact": "John Doe", "notes": "No onions."}
+    "fields": {
+      "user": 1,
+      "order_type": "dine-in",
+      "status": "received",
+      "total": "8.99",
+      "contact": "John Doe",
+      "notes": "No onions.",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
   },
   {
     "model": "orders.orderlineitem",
@@ -12,6 +21,11 @@
   {
     "model": "orders.orderstatusevent",
     "pk": 1,
-    "fields": {"order": 1, "status": "received", "actor": 1}
+    "fields": {
+      "order": 1,
+      "status": "received",
+      "actor": 1,
+      "changed_at": "2024-01-01T00:05:00Z"
+    }
   }
 ]

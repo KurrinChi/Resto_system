@@ -4,6 +4,7 @@ import { Button } from '../../common/Button';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Phone, CreditCard, Calendar, User, Save, Upload } from 'lucide-react';
 import { Toast } from '../../common/Toast';
+import { usersApi } from '../../../services/apiservice';
 
 export const ProfileEdit: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ export const ProfileEdit: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = React.useState('cod');
   const [gender, setGender] = React.useState('');
   const [birthday, setBirthday] = React.useState('');
+  const [address, setAddress] = React.useState('');
   
   // Validation error states
   const [emailError, setEmailError] = React.useState('');
@@ -26,39 +28,217 @@ export const ProfileEdit: React.FC = () => {
   
   // Load user data
   const [user, setUser] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    try {
-      const raw = localStorage.getItem('rs_current_user');
-      let userData = raw ? JSON.parse(raw) : null;
+    const loadUserData = async () => {
+      try {
+        setLoading(true);
+        
+        // Get user ID from localStorage
+        const userId = localStorage.getItem('rs_user_id');
+        const raw = localStorage.getItem('rs_current_user');
+        let userData = raw ? JSON.parse(raw) : null;
+        
+        // If we have a user ID, try to load from Firebase
+        if (userId) {
+          try {
+            const response = await usersApi.getById(userId);
+            if (response.success && response.data) {
+              userData = response.data;
+            }
+          } catch (err) {
+            console.error('Failed to load user from Firebase:', err);
+            // Fall back to localStorage data
+          }
+        }
+        
+        // If no user found, use demo user data
+        if (!userData) {
+          userData = {
+            id: 'demo-user',
+            name: 'John Doe',
+            email: 'john.doe@example.com',
+            avatar: '',
+            contactNumber: '+63 912 345 6789',
+            paymentMethod: 'gcash',
+            gender: 'male',
+            birthday: '1990-05-15',
+            address: localStorage.getItem('userAddress') || 'Manila, Philippines'
+          };
+        }
+        
+        setUser(userData);
+        
+        // Map Firebase user fields to form fields
+        // Firebase: first_name, last_name, username -> name
+        const fullName = userData.first_name && userData.last_name 
+          ? `${userData.first_name} ${userData.last_name}`
+          : userData.name || userData.username || '';
+        
+        setName(fullName);
+        setEmail(userData.email || '');
+        setAvatar(userData.avatar || '');
+        // Load and format phone number from database
+        const rawPhone = userData.contact_number || userData.contactNumber || userData.phone || '';
+        const formattedPhone = rawPhone ? phoneToDisplayFormat(rawPhone) : '';
+        setContactNumber(formattedPhone);
+        setPaymentMethod(userData.payment_method || userData.paymentMethod || 'cod');
+        setGender(userData.gender || '');
+        setBirthday(userData.birthday || userData.birth_date || '');
+        
+        // Load address from Firebase or localStorage
+        const userAddress = userData.address || localStorage.getItem('userAddress') || 'No address set';
+        setAddress(userAddress);
+      } catch (err) {
+        console.error('Error loading user data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadUserData();
+  }, []);
+  
+  // Listen for address updates from map
+  React.useEffect(() => {
+    const handleAddressUpdate = () => {
+      const updatedAddress = localStorage.getItem('userAddress');
+      if (updatedAddress) {
+        setAddress(updatedAddress);
+      }
+    };
+    
+    window.addEventListener('addressUpdated', handleAddressUpdate);
+    return () => {
+      window.removeEventListener('addressUpdated', handleAddressUpdate);
+    };
+  }, []);
+
+  // Phone number formatting utility
+  const formatPhoneNumber = (value: string): string => {
+    // Remove all non-digit characters except +
+    let cleaned = value.replace(/[^\d+]/g, '');
+    
+    // Get current cleaned value for comparison
+    const currentCleaned = contactNumber.replace(/[^\d+]/g, '');
+    
+    // If user types "0" first (and field is empty or just has +63), convert to +63 9 immediately
+    if (cleaned === '0' || (cleaned.startsWith('0') && currentCleaned.length <= 3)) {
+      cleaned = '+639';
+    }
+    // If user starts with 0, convert to +63 9 (remove the 0)
+    else if (cleaned.startsWith('0')) {
+      // Remove the leading 0 and add +63 9
+      cleaned = '+639' + cleaned.substring(1);
+    }
+    // If user types digits without +63, add +63 9
+    else if (cleaned && !cleaned.startsWith('+63')) {
+      // If starts with 9, add +63 before it
+      if (cleaned.startsWith('9')) {
+        cleaned = '+63' + cleaned;
+      } else if (/^\d/.test(cleaned)) {
+        // If starts with other digit, assume it's after 9
+        cleaned = '+639' + cleaned;
+      } else {
+        // Empty or invalid, start with +63 9
+        cleaned = '+639';
+      }
+    }
+    
+    // Ensure it starts with +63
+    if (!cleaned.startsWith('+63')) {
+      cleaned = '+63' + cleaned;
+    }
+    
+    // Extract only digits after +63
+    const match = cleaned.match(/^\+63(.*)$/);
+    if (match) {
+      let digits = match[1].replace(/\D/g, '');
       
-      // If no user found, use demo user data
-      if (!userData) {
-        userData = {
-          id: 'demo-user',
-          name: 'John Doe',
-          email: 'john.doe@example.com',
-          avatar: '',
-          contactNumber: '+63 912 345 6789',
-          paymentMethod: 'gcash',
-          gender: 'male',
-          birthday: '1990-05-15',
-          address: localStorage.getItem('userAddress') || 'Manila, Philippines'
-        };
+      // Ensure first digit is 9
+      if (digits.length > 0 && digits[0] !== '9') {
+        digits = '9' + digits;
       }
       
-      setUser(userData);
-      setName(userData.name || '');
-      setEmail(userData.email || '');
-      setAvatar(userData.avatar || '');
-      setContactNumber(userData.contactNumber || '');
-      setPaymentMethod(userData.paymentMethod || 'cod');
-      setGender(userData.gender || '');
-      setBirthday(userData.birthday || '');
-    } catch {
-      // Fallback
+      // Limit to 10 digits total (9 + 9 more digits)
+      digits = digits.substring(0, 10);
+      
+      // Format: +63 9XX XXX XXXX
+      if (digits.length === 0) {
+        return '+63 9';
+      } else if (digits.length === 1) {
+        return `+63 ${digits}`;
+      } else if (digits.length <= 4) {
+        return `+63 ${digits.substring(0, 1)}${digits.substring(1)}`;
+      } else if (digits.length <= 7) {
+        return `+63 ${digits.substring(0, 1)}${digits.substring(1, 4)} ${digits.substring(4)}`;
+      } else {
+        return `+63 ${digits.substring(0, 1)}${digits.substring(1, 4)} ${digits.substring(4, 7)} ${digits.substring(7)}`;
+      }
     }
-  }, []);
+    
+    return '+63 9';
+  };
+  
+  // Convert formatted phone to database format (+639XXXXXXXXX - no spaces)
+  const phoneToDatabaseFormat = (formatted: string): string => {
+    // Remove all spaces, keep only + and digits
+    return formatted.replace(/\s/g, '');
+  };
+  
+  // Convert database format to display format
+  const phoneToDisplayFormat = (dbFormat: string): string => {
+    if (!dbFormat) return '';
+    
+    // Remove all non-digits except +
+    let cleaned = dbFormat.replace(/[^\d+]/g, '');
+    
+    // If starts with 0, convert to +63
+    if (cleaned.startsWith('0')) {
+      cleaned = '+63' + cleaned.substring(1);
+    }
+    
+    // If doesn't start with +63, add it
+    if (!cleaned.startsWith('+63')) {
+      if (cleaned.startsWith('9')) {
+        cleaned = '+63' + cleaned;
+      } else if (cleaned.length > 0) {
+        cleaned = '+639' + cleaned;
+      } else {
+        cleaned = '+639';
+      }
+    }
+    
+    // Extract digits after +63
+    const match = cleaned.match(/^\+63(.*)$/);
+    if (match) {
+      let digits = match[1].replace(/\D/g, '');
+      
+      // Ensure first digit is 9
+      if (digits.length > 0 && digits[0] !== '9') {
+        digits = '9' + digits;
+      }
+      
+      // Limit to 10 digits
+      digits = digits.substring(0, 10);
+      
+      // Format: +63 9XX XXX XXXX
+      if (digits.length === 0) {
+        return '+63 9';
+      } else if (digits.length === 1) {
+        return `+63 ${digits}`;
+      } else if (digits.length <= 4) {
+        return `+63 ${digits.substring(0, 1)}${digits.substring(1)}`;
+      } else if (digits.length <= 7) {
+        return `+63 ${digits.substring(0, 1)}${digits.substring(1, 4)} ${digits.substring(4)}`;
+      } else {
+        return `+63 ${digits.substring(0, 1)}${digits.substring(1, 4)} ${digits.substring(4, 7)} ${digits.substring(7)}`;
+      }
+    }
+    
+    return '+63 9';
+  };
 
   const handleOpenMapModal = () => {
     window.dispatchEvent(new Event('openMapModal'));
@@ -70,8 +250,15 @@ export const ProfileEdit: React.FC = () => {
     reader.onload = () => setAvatar(String(reader.result));
     reader.readAsDataURL(file);
   };
+  
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+    const formatted = formatPhoneNumber(input);
+    setContactNumber(formatted);
+    setPhoneError(''); // Clear error on change
+  };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     try {
       // Clear previous errors
       setEmailError('');
@@ -87,11 +274,11 @@ export const ProfileEdit: React.FC = () => {
         hasError = true;
       }
 
-      // Validate phone number (must start with +63 9 and have 7 digits after, ignoring spaces)
-      const cleanedPhone = contactNumber.replace(/\s/g, ''); // Remove all spaces
-      const phoneRegex = /^\+639\d{7}$/;
+      // Validate phone number (must start with +63 9 and have 9 more digits, total 12 digits)
+      const cleanedPhone = phoneToDatabaseFormat(contactNumber);
+      const phoneRegex = /^\+639\d{9}$/; // +63 9 + 9 more digits = 12 total
       if (!phoneRegex.test(cleanedPhone)) {
-        setPhoneError('Please enter valid contact number');
+        setPhoneError('Please enter valid contact number (+63 9XX XXX XXXX)');
         hasError = true;
       }
 
@@ -119,40 +306,115 @@ export const ProfileEdit: React.FC = () => {
         return;
       }
 
-      const updatedUser = {
-        ...user,
-        name,
+      // Get user ID
+      const userId = localStorage.getItem('rs_user_id') || user?.id;
+      
+      if (!userId || userId === 'demo-user') {
+        // If no real user ID, just save to localStorage
+        const updatedUser = {
+          ...user,
+          name,
+          email,
+          avatar,
+          contactNumber,
+          paymentMethod,
+          gender,
+          birthday,
+          address: address || localStorage.getItem('userAddress') || user?.address
+        };
+        // Update address in localStorage
+        if (address) {
+          localStorage.setItem('userAddress', address);
+        }
+        localStorage.setItem('rs_current_user', JSON.stringify(updatedUser));
+        setToastVariant('success');
+        setToastMessage('Profile Updated Successfully');
+        setTimeout(() => {
+          navigate('/client/profile');
+        }, 1500);
+        return;
+      }
+
+      // Split name into first_name and last_name
+      const nameParts = name.trim().split(' ');
+      const first_name = nameParts[0] || '';
+      const last_name = nameParts.slice(1).join(' ') || '';
+
+      // Get current address from state or localStorage
+      const currentAddress = address || localStorage.getItem('userAddress') || user?.address || '';
+      
+      // Convert phone to database format (no spaces, with +63)
+      const dbPhoneFormat = phoneToDatabaseFormat(contactNumber);
+      
+      // Prepare update data for Firebase
+      const updateData: any = {
         email,
         avatar,
-        contactNumber,
-        paymentMethod,
+        contact_number: dbPhoneFormat, // Save as +639XXXXXXXXX format
+        payment_method: paymentMethod,
         gender,
         birthday,
-        address: localStorage.getItem('userAddress') || user?.address
+        address: currentAddress,
       };
 
-      // Save to localStorage
-      localStorage.setItem('rs_current_user', JSON.stringify(updatedUser));
-      
-      // Also update in users array if exists
-      const usersRaw = localStorage.getItem('rs_users_v1');
-      if (usersRaw) {
-        const users = JSON.parse(usersRaw);
-        const idx = users.findIndex((u: any) => u.id === user?.id);
-        if (idx !== -1) {
-          users[idx] = updatedUser;
-          localStorage.setItem('rs_users_v1', JSON.stringify(users));
-        }
+      // Only add first_name and last_name if name is provided
+      if (first_name) {
+        updateData.first_name = first_name;
       }
+      if (last_name) {
+        updateData.last_name = last_name;
+      }
+
+      // Remove undefined/null values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined || updateData[key] === null || updateData[key] === '') {
+          delete updateData[key];
+        }
+      });
+
+      // Save to Firebase
+      const response = await usersApi.update(userId, updateData);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to update profile');
+      }
+
+      // Get updated user data from response
+      const updatedUserData = response.data || {};
+      
+      // Update localStorage with new data
+      // Map Firebase fields back to expected format
+      const updatedUser = {
+        ...user,
+        ...updatedUserData,
+        id: userId,
+        name: updatedUserData.first_name && updatedUserData.last_name
+          ? `${updatedUserData.first_name} ${updatedUserData.last_name}`
+          : updatedUserData.username || name,
+        contactNumber: updatedUserData.contact_number 
+          ? phoneToDisplayFormat(updatedUserData.contact_number)
+          : updatedUserData.contactNumber || contactNumber,
+        paymentMethod: updatedUserData.payment_method || updatedUserData.paymentMethod || paymentMethod,
+        address: updatedUserData.address || address || localStorage.getItem('userAddress') || user?.address
+      };
+      
+      // Update address in localStorage if it was updated
+      if (updatedUserData.address) {
+        localStorage.setItem('userAddress', updatedUserData.address);
+        setAddress(updatedUserData.address);
+      }
+      
+      localStorage.setItem('rs_current_user', JSON.stringify(updatedUser));
 
       setToastVariant('success');
       setToastMessage('Profile Updated Successfully');
       setTimeout(() => {
         navigate('/client/profile');
       }, 1500);
-    } catch {
+    } catch (err: any) {
+      console.error('Error saving profile:', err);
       setToastVariant('error');
-      setToastMessage('Failed to save profile');
+      setToastMessage(err?.message || 'Failed to save profile');
     }
   };
 
@@ -160,11 +422,12 @@ export const ProfileEdit: React.FC = () => {
     navigate('/client/profile');
   };
 
-  if (!user) {
+  if (loading || !user) {
     return <div style={{ color: THEME.colors.text.tertiary }}>Loading...</div>;
   }
 
-  const address = localStorage.getItem('userAddress') || user.address || 'No address set';
+  // Use address from state, fallback to localStorage or user data
+  const displayAddress = address || localStorage.getItem('userAddress') || user.address || 'No address set';
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -283,7 +546,7 @@ export const ProfileEdit: React.FC = () => {
                 Address
               </h4>
               <p className="text-sm break-words mb-3" style={{ color: THEME.colors.text.primary }}>
-                {address}
+                {displayAddress}
               </p>
               <Button 
                 variant="secondary"
@@ -321,11 +584,12 @@ export const ProfileEdit: React.FC = () => {
               <input
                 type="tel"
                 value={contactNumber}
-                onChange={(e) => {
-                  // Remove all letters (A-Z, a-z) from input
-                  const cleaned = e.target.value.replace(/[A-Za-z]/g, '');
-                  setContactNumber(cleaned);
-                  setPhoneError(''); // Clear error on change
+                onChange={handlePhoneChange}
+                onFocus={() => {
+                  // If empty, start with +63 9
+                  if (!contactNumber || contactNumber === '') {
+                    setContactNumber('+63 9');
+                  }
                 }}
                 placeholder="+63 9XX XXX XXXX"
                 className="w-full px-3 py-2 rounded-lg border outline-none focus:ring-2"

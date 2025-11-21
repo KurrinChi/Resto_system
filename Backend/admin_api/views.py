@@ -236,7 +236,7 @@ def user_detail(request, user_id):
             })
         
         elif request.method == 'PUT':
-            data = request.data
+            data = request.data.copy()  # Make a copy to avoid modifying original
             
             # Hash password if provided
             if 'password' in data:
@@ -245,11 +245,26 @@ def user_detail(request, user_id):
             
             data['updated_at'] = datetime.now().isoformat()
             
-            update_document(COLLECTIONS['users'], user_id, data)
+            # Remove None values
+            update_data = {k: v for k, v in data.items() if v is not None}
+            
+            update_document(COLLECTIONS['users'], user_id, update_data)
+            
+            # Get updated document
+            doc = get_document(COLLECTIONS['users'], user_id)
+            if not doc.exists:
+                return Response({
+                    'success': False,
+                    'error': 'User not found after update'
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            user_data = {'id': doc.id, **doc.to_dict()}
+            user_data.pop('password_hash', None)
             
             return Response({
                 'success': True,
-                'message': 'User updated successfully'
+                'message': 'User updated successfully',
+                'data': user_data
             })
         
         elif request.method == 'DELETE':
@@ -373,35 +388,81 @@ def menu_item_detail(request, item_id):
 
 # ==================== ORDER MANAGEMENT ====================
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 def list_orders(request):
     """
-    List all orders with optional filtering
+    List all orders with optional filtering or create a new order
     GET /api/admin/orders?status=received&order_type=delivery
+    POST /api/admin/orders
     """
     try:
-        order_status = request.GET.get('status')
-        order_type = request.GET.get('order_type')
+        if request.method == 'GET':
+            order_status = request.GET.get('status')
+            order_type = request.GET.get('order_type')
+            
+            filters = []
+            if order_status:
+                filters.append(('orderStatus', '==', order_status))
+            if order_type:
+                filters.append(('orderType', '==', order_type))
+            
+            orders = query_collection(
+                COLLECTIONS['orders'],
+                filters=filters if filters else None,
+                order_by='createdAt'
+            )
+            
+            orders.reverse()
+            
+            return Response({
+                'success': True,
+                'data': orders
+            })
         
-        filters = []
-        if order_status:
-            filters.append(('orderStatus', '==', order_status))  # Changed from 'status'
-        if order_type:
-            filters.append(('orderType', '==', order_type))  # Changed from 'order_type'
-        
-        orders = query_collection(
-            COLLECTIONS['orders'],
-            filters=filters if filters else None,
-            order_by='createdAt'  # Changed from 'created_at'
-        )
-        
-        # Reverse to get newest first
-        orders.reverse()
-        
-        return Response({
-            'success': True,
-            'data': orders
-        })
+        elif request.method == 'POST':
+            data = request.data
+            
+            # Get current user or guest
+            current_user = None
+            try:
+                user_raw = request.headers.get('X-User-Id') or request.data.get('userId')
+                if user_raw:
+                    current_user = user_raw
+            except:
+                pass
+            
+            # Prepare order data for Firebase
+            order_data = {
+                'items': data.get('items', []),
+                'orderType': data.get('orderType', data.get('order_type', 'delivery')),
+                'orderStatus': 'received',
+                'totalFee': float(data.get('total', data.get('totalFee', 0))),
+                'subtotal': float(data.get('subtotal', data.get('totalFee', 0))),
+                'deliveryAddress': data.get('deliveryAddress', ''),
+                'contact': data.get('contact', ''),
+                'notes': data.get('notes', data.get('noteToDriver', '')),
+                'paymentMethod': data.get('paymentMethod', 'cod'),
+                'createdAt': datetime.now().isoformat(),
+                'dayKey': str(datetime.now().date()),
+            }
+            
+            if current_user:
+                order_data['userId'] = current_user
+            
+            if data.get('guest_id'):
+                order_data['guestId'] = data.get('guest_id')
+            
+            # Add to Firestore
+            doc_id = add_document(COLLECTIONS['orders'], order_data)
+            
+            return Response({
+                'success': True,
+                'data': {
+                    'id': doc_id,
+                    **order_data
+                }
+            }, status=status.HTTP_201_CREATED)
+            
     except Exception as e:
         return Response({
             'success': False,
@@ -996,6 +1057,226 @@ def change_password(request):
             'message': 'Password changed successfully'
         })
     
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ==================== AUTHENTICATION (Firebase) ====================
+
+@api_view(['POST'])
+def firebase_register(request):
+    """
+    Register a new user in Firebase
+    POST /api/admin/auth/register
+    """
+    try:
+        data = request.data
+        username = data.get('username')
+        email = data.get('email')
+        password = data.get('password')
+        
+        if not username or not email or not password:
+            return Response({
+                'success': False,
+                'error': 'Username, email, and password are required.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if username already exists
+        existing_username = query_collection(
+            COLLECTIONS['users'],
+            filters=[('username', '==', username)]
+        )
+        if existing_username:
+            return Response({
+                'success': False,
+                'error': 'Username already exists.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if email already exists
+        existing_email = query_collection(
+            COLLECTIONS['users'],
+            filters=[('email', '==', email)]
+        )
+        if existing_email:
+            return Response({
+                'success': False,
+                'error': 'Email already registered.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Hash password
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        
+        # Prepare user data
+        user_data = {
+            'username': username,
+            'email': email,
+            'password_hash': password_hash,
+            'role': data.get('role', 'CUSTOMER'),
+            'status': 'ACTIVE',
+            'created_at': datetime.now().isoformat(),
+            'login_attempts': 0,
+        }
+        
+        # Add optional fields
+        if data.get('first_name'):
+            user_data['first_name'] = data.get('first_name')
+        if data.get('last_name'):
+            user_data['last_name'] = data.get('last_name')
+        
+        # Save to Firebase
+        doc_id = add_document(COLLECTIONS['users'], user_data)
+        
+        # Remove password hash from response
+        user_data.pop('password_hash', None)
+        
+        return Response({
+            'success': True,
+            'data': {
+                'id': doc_id,
+                'user': user_data,
+                'access': doc_id,  # Simple token (in production, use JWT)
+                'refresh': doc_id,
+            }
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+def firebase_login(request):
+    """
+    Login user via Firebase
+    POST /api/admin/auth/login
+    """
+    try:
+        # Support multiple field names: identifier, username, or email
+        identifier = (request.data.get('identifier') or 
+                      request.data.get('username') or 
+                      request.data.get('email'))
+        password = request.data.get('password')
+        
+        if not identifier or not password:
+            return Response({
+                'success': False,
+                'error': 'Username/email and password are required.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Hash password for comparison
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        
+        # Find user by username or email
+        users = query_collection(COLLECTIONS['users'])
+        user = None
+        
+        identifier_lower = identifier.lower().strip()
+        
+        for u in users:
+            username = (u.get('username') or '').lower().strip()
+            email = (u.get('email') or '').lower().strip()
+            
+            if username == identifier_lower or email == identifier_lower:
+                user = u
+                break
+        
+        if not user:
+            return Response({
+                'success': False,
+                'error': 'No account found with this username or email.'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Check if user has password_hash (required for login)
+        if not user.get('password_hash'):
+            return Response({
+                'success': False,
+                'error': 'This account cannot be used for login. Please contact support.'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Check if user is active
+        if user.get('status') != 'ACTIVE':
+            return Response({
+                'success': False,
+                'error': 'This account is inactive. Please contact support.'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Verify password
+        stored_hash = user.get('password_hash', '').strip()
+        if stored_hash != password_hash:
+            return Response({
+                'success': False,
+                'error': 'Invalid password. Please try again.'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Update login attempts (reset on successful login)
+        update_document(COLLECTIONS['users'], user['id'], {
+            'login_attempts': 0,
+            'last_login': datetime.now().isoformat()
+        })
+        
+        # Remove password hash from response
+        user.pop('password_hash', None)
+        
+        return Response({
+            'success': True,
+            'data': {
+                'user': {
+                    'id': user['id'],
+                    'username': user.get('username'),
+                    'email': user.get('email'),
+                    'first_name': user.get('first_name'),
+                    'last_name': user.get('last_name'),
+                    'role': user.get('role'),
+                    'avatar': user.get('avatar'),
+                },
+                'access': user['id'],  # Simple token (in production, use JWT)
+                'refresh': user['id'],
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+def firebase_current_user(request):
+    """
+    Get current user from Firebase
+    GET /api/admin/auth/me
+    Requires user_id in headers or query params
+    """
+    try:
+        user_id = request.headers.get('X-User-Id') or request.GET.get('user_id')
+        
+        if not user_id:
+            return Response({
+                'success': False,
+                'error': 'User ID is required.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        doc = get_document(COLLECTIONS['users'], user_id)
+        if not doc.exists:
+            return Response({
+                'success': False,
+                'error': 'User not found.'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        user_data = {'id': doc.id, **doc.to_dict()}
+        user_data.pop('password_hash', None)
+        
+        return Response({
+            'success': True,
+            'data': user_data
+        })
+        
     except Exception as e:
         return Response({
             'success': False,

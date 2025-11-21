@@ -2,43 +2,59 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
 import { User as UserIcon, Mail, Lock, ArrowRight } from 'lucide-react';
-
-type User = {
-  id: string;
-  username: string;
-  email: string;
-  password: string;
-  name?: string;
-};
-
-const UsersKey = 'rs_users_v1';
+import { authService, persistSession } from '../../../services/authService';
 
 export const Register: React.FC = () => {
   const [username, setUsername] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!username || !email || !password) return setError('Please fill all fields');
+    if (!username || !email || !password) {
+      return setError('Please fill all fields');
+    }
 
+    setLoading(true);
     try {
-      const raw = localStorage.getItem(UsersKey);
-      const users: User[] = raw ? JSON.parse(raw) : [];
-      if (users.find((u) => u.username === username)) return setError('Username already exists');
-      if (users.find((u) => u.email === email)) return setError('Email already registered');
-
-      const user: User = { id: Date.now().toString(), username, email, password };
-      users.push(user);
-      localStorage.setItem(UsersKey, JSON.stringify(users));
-      // Simple auto-login by saving current user
-      localStorage.setItem('rs_current_user', JSON.stringify(user));
+      const data = await authService.register({ username, email, password });
+      persistSession(data);
       navigate('/client');
-    } catch (err) {
-      setError('Failed to register');
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      let errorMessage = 'Unable to create account. Please try again.';
+      
+      if (err?.response) {
+        const status = err.response.status;
+        const data = err.response.data;
+        
+        if (status === 400) {
+          // Firebase returns error in data.error or data.message
+          errorMessage = data?.error || data?.message || 'Invalid request. Please check your input.';
+        } else if (status === 401) {
+          errorMessage = data?.error || data?.message || 'Authentication failed.';
+        } else if (status === 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (typeof data === 'object') {
+          // Handle nested error objects
+          const firstError = Object.values(data)[0];
+          if (Array.isArray(firstError)) {
+            errorMessage = firstError[0] as string;
+          } else if (typeof firstError === 'string') {
+            errorMessage = firstError;
+          }
+        }
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -188,7 +204,7 @@ export const Register: React.FC = () => {
                 color: '#FFFFFF'
               }}
             >
-              Create Account
+              {loading ? 'Creating Account...' : 'Create Account'}
               <ArrowRight className="w-5 h-5" />
             </button>
 

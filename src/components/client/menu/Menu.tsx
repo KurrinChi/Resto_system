@@ -6,19 +6,17 @@ import { Minus, Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../common/Button';
 import { useCart } from '../cart/CartContext';
 import { Toast } from '../../common/Toast';
+import { menuApi } from '../../../services/apiservice';
 
-const sampleMenu = [
-  { id: 1, name: 'Burger Deluxe', price: 8.99, desc: 'Juicy beef patty with cheese', category: 'Burgers', isBestSeller: true, isNewOffer: false },
-  { id: 2, name: 'Classic Pizza', price: 12.5, desc: 'Tomato, mozzarella, basil', category: 'Pizza', isBestSeller: false, isNewOffer: true },
-  { id: 3, name: 'Caesar Salad', price: 7.2, desc: 'Fresh romaine, parmesan', category: 'Salads', isBestSeller: false, isNewOffer: false },
-  { id: 4, name: 'Pasta Carbonara', price: 11.3, desc: 'Creamy sauce, pancetta', category: 'Pasta', isBestSeller: true, isNewOffer: false },
-  { id: 5, name: 'Veggie Wrap', price: 6.5, desc: 'Grilled veg, hummus', category: 'Wraps', isBestSeller: false, isNewOffer: true },
-  { id: 6, name: 'Chicken Wings', price: 9.99, desc: 'Spicy buffalo wings', category: 'Burgers', isBestSeller: true, isNewOffer: false },
-  { id: 7, name: 'Margherita Pizza', price: 10.99, desc: 'Fresh mozzarella and basil', category: 'Pizza', isBestSeller: false, isNewOffer: false },
-  { id: 8, name: 'Greek Salad', price: 8.5, desc: 'Feta, olives, cucumber', category: 'Salads', isBestSeller: false, isNewOffer: true },
-];
-
-const categories = ['All', 'Burgers', 'Pizza', 'Salads', 'Pasta', 'Wraps'];
+type MenuItem = {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+  category?: string;
+  image?: string;
+  available?: boolean;
+};
 
 export const Menu: React.FC = () => {
   const navigate = useNavigate();
@@ -31,7 +29,42 @@ export const Menu: React.FC = () => {
   const [orderType, setOrderType] = React.useState<'delivery' | 'pickup'>('delivery');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
-  const [favorites, setFavorites] = React.useState<Set<number>>(new Set());
+  const [favorites, setFavorites] = React.useState<Set<string>>(new Set());
+  const [menuItems, setMenuItems] = React.useState<MenuItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [categories, setCategories] = React.useState<string[]>(['All']);
+
+  // Fetch menu items from Firebase
+  React.useEffect(() => {
+    const fetchMenu = async () => {
+      try {
+        setLoading(true);
+        const response = await menuApi.getAll();
+        if (response.success && response.data) {
+          const items = response.data.map((item: any) => ({
+            id: item.id || item.name,
+            name: item.name || 'Unnamed Item',
+            price: parseFloat(item.price || item.pricePerUnit || 0),
+            description: item.description || '',
+            category: item.category || 'Uncategorized',
+            image: item.image || item.imageUrl || '',
+            available: item.available !== false,
+          }));
+          setMenuItems(items);
+          
+          // Extract unique categories
+          const uniqueCategories = ['All', ...new Set(items.map((i: MenuItem) => i.category).filter(Boolean))];
+          setCategories(uniqueCategories as string[]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch menu:', error);
+        setToastMessage('Failed to load menu items');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMenu();
+  }, []);
 
   // Add keyframe animations on mount
   React.useEffect(() => {
@@ -88,30 +121,24 @@ export const Menu: React.FC = () => {
   }, []);
 
   // Filter items based on all criteria
-  let filteredItems = filter === 'All' ? sampleMenu : sampleMenu.filter((m) => m.category === filter);
+  let filteredItems = filter === 'All' 
+    ? menuItems.filter(item => item.available !== false)
+    : menuItems.filter((m) => m.category === filter && m.available !== false);
   
   // Apply search query filter (search in name, description, category)
   if (searchQuery.trim()) {
     const query = searchQuery.toLowerCase();
     filteredItems = filteredItems.filter(item => 
       item.name.toLowerCase().includes(query) ||
-      item.desc.toLowerCase().includes(query) ||
-      item.category.toLowerCase().includes(query)
+      (item.description || '').toLowerCase().includes(query) ||
+      (item.category || '').toLowerCase().includes(query)
     );
   }
   
   // Apply price range filter
   filteredItems = filteredItems.filter(item => item.price >= priceRange[0] && item.price <= priceRange[1]);
-  
-  // Apply checkbox filters
-  if (showBestSellers) {
-    filteredItems = filteredItems.filter(item => item.isBestSeller);
-  }
-  if (showNewOffers) {
-    filteredItems = filteredItems.filter(item => item.isNewOffer);
-  }
 
-  const handleAddToCart = (item: { id: number | string; name: string; price: number; desc?: string; image?: string }) => {
+  const handleAddToCart = (item: MenuItem) => {
     addItem({
       id: item.id,
       name: item.name,
@@ -132,15 +159,14 @@ export const Menu: React.FC = () => {
     removeItem(id);
   };
 
-  const handleToggleFavorite = (itemId: number | string) => {
-    const id = typeof itemId === 'string' ? parseInt(itemId) : itemId;
+  const handleToggleFavorite = (itemId: string) => {
     setFavorites(prev => {
       const newFavorites = new Set(prev);
-      if (newFavorites.has(id)) {
-        newFavorites.delete(id);
+      if (newFavorites.has(itemId)) {
+        newFavorites.delete(itemId);
         setToastMessage('Removed from Favorites');
       } else {
-        newFavorites.add(id);
+        newFavorites.add(itemId);
         setToastMessage('Added to Favorites');
       }
       return newFavorites;
@@ -160,9 +186,9 @@ export const Menu: React.FC = () => {
   // Function to get count of items per category
   const getCategoryCount = (category: string) => {
     if (category === 'All') {
-      return sampleMenu.length;
+      return menuItems.filter(item => item.available !== false).length;
     }
-    return sampleMenu.filter(item => item.category === category).length;
+    return menuItems.filter(item => item.category === category && item.available !== false).length;
   };
 
   const subtotal = items.reduce((sum: number, item) => sum + (item.price * item.qty), 0);
@@ -263,7 +289,12 @@ export const Menu: React.FC = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto mt-6 pr-2">
-          {filteredItems.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 mb-4" style={{ borderColor: THEME.colors.primary.DEFAULT }}></div>
+              <p className="text-sm" style={{ color: THEME.colors.text.tertiary }}>Loading menu items...</p>
+            </div>
+          ) : filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
               <div className="rounded-full p-6 mb-6" style={{ backgroundColor: THEME.colors.background.tertiary }}>
                 <svg
@@ -307,7 +338,21 @@ export const Menu: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredItems.map((item, index) => (
-                <MenuItemCard key={item.id} item={item} onAddToOrder={handleAddToCart} index={index} />
+                <MenuItemCard 
+                  key={item.id} 
+                  item={{
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    desc: item.description,
+                    image: item.image,
+                    category: item.category,
+                    isBestSeller: false,
+                    isNewOffer: false
+                  }} 
+                  onAddToOrder={handleAddToCart} 
+                  index={index} 
+                />
               ))}
             </div>
           )}

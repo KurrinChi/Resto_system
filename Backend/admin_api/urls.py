@@ -40,5 +40,10 @@ urlpatterns = [
     # Profile
     path('profile', views.profile, name='profile'),
     path('profile/password', views.change_password, name='change_password'),
+    
+    # Authentication (Firebase)
+    path('auth/register', views.firebase_register, name='firebase_register'),
+    path('auth/login', views.firebase_login, name='firebase_login'),
+    path('auth/me', views.firebase_current_user, name='firebase_current_user'),
 ]
 

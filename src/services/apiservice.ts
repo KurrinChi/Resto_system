@@ -80,6 +80,10 @@ export const ordersApi = {
     const response = await api.get(`/orders/${orderId}`);
     return response.data;
   },
+  create: async (orderData: any) => {
+    const response = await api.post('/orders', orderData);
+    return response.data;
+  },
   updateStatus: async (orderId: string, status: string) => {
     const response = await api.put(`/orders/${orderId}/status`, { status });
     return response.data;
