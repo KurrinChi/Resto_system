@@ -358,6 +358,33 @@ const Map = forwardRef<{ handleSelectSearchResult: (result: any) => void }, MapP
       localStorage.setItem('userAddress', address);
       localStorage.setItem('userLocation', JSON.stringify(selectedLocation));
       
+      // Update user's address in backend if logged in
+      try {
+        const userRaw = sessionStorage.getItem('rs_current_user') || localStorage.getItem('rs_current_user');
+        if (userRaw) {
+          const currentUser = JSON.parse(userRaw);
+          
+          // Update backend
+          const updateResponse = await fetch(`http://localhost:8000/api/auth/update-address/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: currentUser.id,
+              address: address
+            })
+          });
+          
+          if (updateResponse.ok) {
+            // Update local session storage with new address
+            currentUser.address = address;
+            sessionStorage.setItem('rs_current_user', JSON.stringify(currentUser));
+            localStorage.setItem('rs_current_user', JSON.stringify(currentUser));
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to update user address in backend:', err);
+      }
+      
       // Notify parent and other components
       onLocationSelect?.();
     } catch (error) {

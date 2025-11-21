@@ -2,7 +2,7 @@ import React from 'react';
 import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
 import { Button } from '../../common/Button';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Phone, Calendar, User, Edit } from 'lucide-react';
+import { MapPin, Phone, User, Edit } from 'lucide-react';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -10,30 +10,59 @@ export const ProfilePage: React.FC = () => {
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    try {
-      const rawSession = sessionStorage.getItem('rs_current_user');
-      const rawLocal = !rawSession ? localStorage.getItem('rs_current_user') : null;
-      const userData = rawSession ? JSON.parse(rawSession) : (rawLocal ? JSON.parse(rawLocal) : null);
-      setUser(userData);
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
+    const loadUser = async () => {
+      try {
+        const raw = sessionStorage.getItem('rs_current_user') || localStorage.getItem('rs_current_user');
+        if (!raw) {
+          setUser(null);
+          return;
+        }
+        const parsed = JSON.parse(raw);
+        if (!parsed.id) {
+          setUser(parsed);
+          return;
+        }
+        const res = await fetch(`http://localhost:8000/api/auth/user/${parsed.id}/`);
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data);
+          // refresh session storage with latest data
+          const merged = { ...parsed, ...data };
+          sessionStorage.setItem('rs_current_user', JSON.stringify(merged));
+          localStorage.setItem('rs_current_user', JSON.stringify(merged));
+        } else {
+          setUser(parsed);
+        }
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadUser();
   }, []);
 
   // Listen for address updates
   React.useEffect(() => {
-    const handleAddressUpdate = () => {
-      const savedAddress = localStorage.getItem('userAddress');
-      if (user) {
-        setUser({ ...user, address: savedAddress });
-      }
+    const handleAddressUpdate = async () => {
+      try {
+        const raw = sessionStorage.getItem('rs_current_user') || localStorage.getItem('rs_current_user');
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (!parsed.id) return;
+        const res = await fetch(`http://localhost:8000/api/auth/user/${parsed.id}/`);
+        if (res.ok) {
+          const data = await res.json();
+          setUser(prev => ({ ...(prev || {}), ...data }));
+          const merged = { ...parsed, ...data };
+          sessionStorage.setItem('rs_current_user', JSON.stringify(merged));
+          localStorage.setItem('rs_current_user', JSON.stringify(merged));
+        }
+      } catch {/* ignore */}
     };
-    
     window.addEventListener('addressUpdated', handleAddressUpdate);
     return () => window.removeEventListener('addressUpdated', handleAddressUpdate);
-  }, [user]);
+  }, []);
 
   const handleOpenMapModal = () => {
     window.dispatchEvent(new Event('openMapModal'));
@@ -57,10 +86,9 @@ export const ProfilePage: React.FC = () => {
     );
   }
 
-  const address = user.address || localStorage.getItem('userAddress') || 'No address set';
+  const address = user.address || 'No address set';
   const contactNumber = user.contactNumber || user.phoneNumber || user.phone || 'Not set';
   // Removed paymentMethod and gender (deprecated fields)
-  const birthday = user.birthday || 'Not set';
   const avatar = user.avatar || '';
 
   return (
@@ -88,7 +116,7 @@ export const ProfilePage: React.FC = () => {
             {avatar ? (
               <img 
                 src={avatar} 
-                alt={user.name}
+                alt={user.fullName || 'Avatar'}
                 className="w-24 h-24 rounded-full object-cover"
                 style={{ border: `3px solid ${THEME.colors.primary.DEFAULT}` }}
               />
@@ -105,7 +133,7 @@ export const ProfilePage: React.FC = () => {
           {/* Name */}
           <div className="flex-1">
             <h3 className="text-2xl font-bold mb-1" style={{ color: THEME.colors.text.primary }}>
-              {user.name || user.username || 'Guest User'}
+              {user.fullName}
             </h3>
             <p className="text-sm" style={{ color: THEME.colors.text.tertiary }}>
               {user.email || 'No email provided'}
@@ -135,19 +163,7 @@ export const ProfilePage: React.FC = () => {
               <p className="text-base break-words mb-3" style={{ color: THEME.colors.text.primary }}>
                 {address}
               </p>
-              <Button 
-                variant="secondary"
-                onClick={handleOpenMapModal}
-                className="text-sm"
-                style={{
-                  backgroundColor: THEME.colors.background.tertiary,
-                  color: THEME.colors.text.primary,
-                  padding: '0.5rem 1rem'
-                }}
-              >
-                <MapPin className="w-4 h-4 mr-2" />
-                Change Address
-              </Button>
+        
             </div>
           </div>
         </div>
@@ -177,32 +193,7 @@ export const ProfilePage: React.FC = () => {
 
         {/* Deprecated sections (Payment Method, Gender) removed */}
 
-        {/* Birthday */}
-        <div 
-          className="rounded-lg p-5 md:col-span-2"
-          style={{ backgroundColor: THEME.colors.background.secondary, border: `1px solid ${THEME.colors.border.DEFAULT}` }}
-        >
-          <div className="flex items-start gap-3">
-            <div 
-              className="p-2 rounded-lg flex-shrink-0"
-              style={{ backgroundColor: THEME.colors.primary.DEFAULT + '20' }}
-            >
-              <Calendar className="w-5 h-5" style={{ color: THEME.colors.primary.DEFAULT }} />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold mb-1" style={{ color: THEME.colors.text.secondary }}>
-                Birthday
-              </h4>
-              <p className="text-base" style={{ color: THEME.colors.text.primary }}>
-                {birthday !== 'Not set' ? new Date(birthday).toLocaleDateString('en-US', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                }) : birthday}
-              </p>
-            </div>
-          </div>
-        </div>
+        {/* Birthday removed (not in users table) */}
       </div>
 
 

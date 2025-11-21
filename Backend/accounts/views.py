@@ -167,3 +167,129 @@ def login(request):
         return JsonResponse({
             'error': f'Login failed: {str(e)}'
         }, status=500)
+
+
+@csrf_exempt
+def update_address(request):
+    """Update user's address"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+
+    user_id = data.get('userId')
+    address = data.get('address', '')
+
+    if not user_id:
+        return JsonResponse({'error': 'User ID is required'}, status=400)
+
+    try:
+        with connection.cursor() as cursor:
+            # Update address
+            cursor.execute("""
+                UPDATE users 
+                SET address = %s, updated_at = %s
+                WHERE id = %s
+            """, [address, datetime.now().isoformat(), user_id])
+            
+            if cursor.rowcount == 0:
+                return JsonResponse({'error': 'User not found'}, status=404)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Address updated successfully'
+            }, status=200)
+            
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Failed to update address: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+def update_profile(request):
+    """Update user's profile including name, email, avatar, contact, and address (no birthday column)"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON format'}, status=400)
+
+    user_id = data.get('userId')
+    if not user_id:
+        return JsonResponse({'error': 'User ID is required'}, status=400)
+
+    # Extract fields
+    name = data.get('name', '')
+    email = data.get('email', '')
+    avatar = data.get('avatar', '')
+    contact_number = data.get('contactNumber', '')
+    address = data.get('address', '')
+    current_time = datetime.now().isoformat()
+
+    try:
+        with connection.cursor() as cursor:
+            # Check if email is already taken by another user
+            if email:
+                cursor.execute("""
+                    SELECT id FROM users WHERE email = %s AND id != %s
+                """, [email, user_id])
+                if cursor.fetchone():
+                    return JsonResponse({'error': 'Email already in use by another account'}, status=409)
+
+            # Update profile
+            cursor.execute("""
+                UPDATE users 
+                SET name = %s, fullName = %s, email = %s, avatar = %s, 
+                    phoneNumber = %s, phone = %s, address = %s, 
+                    updated_at = %s
+                WHERE id = %s
+            """, [name, name, email, avatar, contact_number, contact_number, address, current_time, user_id])
+            
+            if cursor.rowcount == 0:
+                return JsonResponse({'error': 'User not found'}, status=404)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Profile updated successfully'
+            }, status=200)
+            
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Failed to update profile: {str(e)}'
+        }, status=500)
+
+@csrf_exempt
+def get_user(request, user_id):
+    """Fetch a user's current data by ID (excluding birthday - column not present)"""
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT id, fullName, name, email, phoneNumber, phone, address, avatar, role, status
+                FROM users WHERE id = %s
+            """, [user_id])
+            row = cursor.fetchone()
+            if not row:
+                return JsonResponse({'error': 'User not found'}, status=404)
+            return JsonResponse({
+                'id': row[0],
+                'fullName': row[1],
+                'name': row[2],
+                'email': row[3],
+                'phoneNumber': row[4],
+                'phone': row[5],
+                'address': row[6],
+                'avatar': row[7],
+                'role': row[8],
+                'status': row[9],
+            }, status=200)
+    except Exception as e:
+        return JsonResponse({'error': f'Failed to fetch user: {str(e)}'}, status=500)

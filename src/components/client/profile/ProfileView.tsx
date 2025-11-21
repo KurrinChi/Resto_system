@@ -22,7 +22,7 @@ export const ProfileView: React.FC = () => {
 
       <div className="rounded-lg p-4" style={{ backgroundColor: THEME.colors.background.secondary, border: `1px solid ${THEME.colors.border.DEFAULT}` }}>
         <div className="mb-3">
-          <div className="text-lg font-medium" style={{ color: THEME.colors.text.primary }}>{user.name || user.username}</div>
+          <div className="text-lg font-medium" style={{ color: THEME.colors.text.primary }}>{user.fullName || 'Guest User'}</div>
           <div className="text-sm" style={{ color: THEME.colors.text.tertiary }}>{user.email}</div>
         </div>
 
