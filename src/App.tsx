@@ -26,7 +26,7 @@ function App() {
     <ThemeProvider>
       <Routes>
         {/* Redirect root to admin dashboard */}
-        <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
 
         {/* Admin Routes */}
         <Route path="/admin" element={<AdminLayout />}>
