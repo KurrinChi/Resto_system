@@ -4,6 +4,7 @@ import { Button } from '../../common/Button';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Phone, User, Save, Upload } from 'lucide-react';
 import { Toast } from '../../common/Toast';
+import { setSessionUser } from '../../../services/sessionService';
 
 export const ProfileEdit: React.FC = () => {
   const navigate = useNavigate();
@@ -155,8 +156,7 @@ export const ProfileEdit: React.FC = () => {
             address: currentAddress
         };
 
-        sessionStorage.setItem('rs_current_user', JSON.stringify(updatedUser));
-        localStorage.setItem('rs_current_user', JSON.stringify(updatedUser));
+        try { setSessionUser(updatedUser as any); } catch {}
 
         setToastVariant('success');
         setToastMessage('Profile Updated Successfully');

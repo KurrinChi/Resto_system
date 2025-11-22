@@ -3,6 +3,9 @@ import { Card } from '../../common/Card';
 import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
 import { useCart } from '../cart/CartContext';
 import { Package, Search, Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ordersApi } from '../../../services/apiservice';
+import { getSessionUser } from '../../../services/sessionService';
+import type { SessionUser } from '../../../services/sessionService';
 
 // Mock data for demonstration
 const mockOrders = [
@@ -79,6 +82,27 @@ const mockOrders = [
 export const OrderHistory: React.FC = () => {
   const { getOrders } = useCart();
   const cartOrders = getOrders();
+  const [ordersFromApi, setOrdersFromApi] = React.useState<any[] | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const [sessionUser, setSessionUser] = React.useState<SessionUser | null>(getSessionUser());
+
+  // Update session user when it changes elsewhere in the app
+  React.useEffect(() => {
+    const handler = () => {
+      const newUser = getSessionUser();
+      setSessionUser((prev) => {
+        const prevId = prev?.id ?? null;
+        const newId = newUser?.id ?? null;
+        // only update state if id actually changed to avoid re-renders/loops
+        if (prevId === newId) return prev;
+        return newUser;
+      });
+    };
+    window.addEventListener('rs_user_updated', handler);
+    return () => window.removeEventListener('rs_user_updated', handler);
+  }, []);
   
   // Filter states
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -113,8 +137,14 @@ export const OrderHistory: React.FC = () => {
     };
   }, []);
   
-  // Combine cart orders with mock data for demonstration
-  const allOrders = cartOrders.length > 0 ? cartOrders : mockOrders;
+  // Combine sources:
+  // - If we've fetched from API (ordersFromApi !== null) use that result (even if empty)
+  // - Otherwise fall back to cartOrders (in-progress) or finally mockOrders for demo.
+  const allOrders = ordersFromApi !== null
+    ? ordersFromApi
+    : cartOrders.length > 0
+      ? cartOrders
+      : mockOrders;
   
   // Filter orders based on search query and date
   const orders = allOrders.filter(order => {
@@ -209,7 +239,119 @@ export const OrderHistory: React.FC = () => {
 
   const hasFilters = searchQuery.trim() !== '' || selectedDate !== '';
 
+  // Fetch orders from backend and restrict to current session user.
+  // Re-run when `sessionUser` changes (i.e., after sign-in/out).
+  React.useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const user = sessionUser;
+        if (!user) {
+          // mark as fetched empty so UI prompts sign-in
+          setOrdersFromApi([]);
+          setLoading(false);
+          return;
+        }
+
+        const resp = await ordersApi.getAll();
+        // Support both shapes: { success, data } or raw array
+        const data = resp && resp.data ? resp.data : resp;
+
+        if (!Array.isArray(data)) {
+          setOrdersFromApi([]);
+          setLoading(false);
+          return;
+        }
+
+        // Filter to only orders belonging to this user (server may return all)
+        const sessionName = (user as any)?.name || (user as any)?.fullName || (user as any)?.displayName || null;
+        const userOrders = data.filter((o: any) => {
+          const orderUserId = o.userId || o.customerId || o.user || o.user_id || null;
+          const orderCustomerName = o.customerFullName || o.customerName || o.fullName || o.name || null;
+
+          // If session has an id, prefer matching by id
+          if (user.id) {
+            return orderUserId != null && String(orderUserId) === String(user.id);
+          }
+
+          // If no id available, try matching by full name (case-insensitive, trimmed)
+          if (sessionName && orderCustomerName) {
+            try {
+              return String(sessionName).trim().toLowerCase() === String(orderCustomerName).trim().toLowerCase();
+            } catch (e) {
+              return false;
+            }
+          }
+
+          return false;
+        }).map((o: any) => ({
+          id: o.id || o.orderId || o.order_number,
+          items: o.orderList || o.items || o.order_items || [],
+          total: o.totalFee || o.total || o.amount || 0,
+          type: o.orderType || o.type || 'delivery',
+          status: o.orderStatus || o.status || 'pending',
+          createdAt: o.createdAt || o.created_at || o.dayKey || new Date().toISOString(),
+        }));
+
+        // Only update state when the fetched result actually differs to avoid unnecessary re-renders
+        setOrdersFromApi((prev) => {
+          try {
+            const prevJson = JSON.stringify(prev || []);
+            const currJson = JSON.stringify(userOrders || []);
+            if (prevJson === currJson) return prev;
+          } catch (e) {
+            // if stringify fails, fall back to setting state
+          }
+          return userOrders;
+        });
+      } catch (err: any) {
+        console.error('Error fetching user orders:', err);
+        setError(err?.message || 'Failed to fetch orders');
+        setOrdersFromApi([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [sessionUser]);
+
   if (orders.length === 0) {
+    // If user is not signed in, prompt to sign in
+    if (!sessionUser) {
+      return (
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold" style={{ color: THEME.colors.text.primary }}>Order History</h2>
+          <div className="min-h-[200px] flex flex-col items-center justify-center">
+            <p style={{ color: THEME.colors.text.primary }}>Please sign in to view your orders.</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (loading) {
+      return (
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold" style={{ color: THEME.colors.text.primary }}>Order History</h2>
+          <div className="min-h-[200px] flex flex-col items-center justify-center">
+            <p style={{ color: THEME.colors.text.primary }}>Loading your orders...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="space-y-6">
+          <h2 className="text-2xl font-bold" style={{ color: THEME.colors.text.primary }}>Order History</h2>
+          <div className="min-h-[200px] flex flex-col items-center justify-center">
+            <p style={{ color: '#ef4444' }}>Error: {error}</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-6">
         {/* Search and Filter Section */}
@@ -511,7 +653,11 @@ export const OrderHistory: React.FC = () => {
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {orders.map((order, index) => {
-          const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const subtotal = (order.items || []).reduce((sum: number, item: any) => {
+              const qty = item.qty || item.quantity || 1;
+              const price = item.price ?? item.unitPrice ?? (item.lineTotal ? (item.lineTotal / (qty || 1)) : 0);
+              return sum + (price * qty);
+            }, 0);
           
           return (
             <Card 

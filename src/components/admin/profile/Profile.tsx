@@ -14,6 +14,7 @@ import { Input } from "../../common/Input";
 import { THEME } from "../../../constants/theme";
 import { Avatar } from "../../common/Avatar";
 import { profileApi } from "../../../services/apiservice";
+import { setSessionUser } from '../../../services/sessionService';
 import { useAdmin } from "../../../contexts/AdminContext";
 
 export const Profile: React.FC = () => {
@@ -79,17 +80,20 @@ export const Profile: React.FC = () => {
       });
 
       if (response.success) {
-        // Update session storage with new profile data
-        const currentUser = JSON.parse(sessionStorage.getItem('rs_current_user') || '{}');
-        const updatedUser = {
-          ...currentUser,
-          name,
-          email,
-          phoneNumber: phone,
-          avatar,
-        };
-        sessionStorage.setItem('rs_current_user', JSON.stringify(updatedUser));
-        localStorage.setItem('rs_current_user', JSON.stringify(updatedUser));
+        // Update centralized session storage with new profile data
+        try {
+          const currentUser = JSON.parse(sessionStorage.getItem('rs_current_user') || '{}');
+          const updatedUser = {
+            ...currentUser,
+            name,
+            email,
+            phoneNumber: phone,
+            avatar,
+          };
+          setSessionUser(updatedUser as any);
+        } catch (err) {
+          console.warn('Failed to update session user after profile edit', err);
+        }
         
         alert("Profile updated successfully!");
         setHasChanges(false);

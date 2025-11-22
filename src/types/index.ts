@@ -28,6 +28,9 @@ export interface Order {
   orderNumber: string;
   customerId: string;
   customerName: string;
+  // Optional richer customer data coming from backend
+  customerFullName?: string;
+  isGuestOrder?: boolean;
   items: OrderItem[];
   status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   total: number;

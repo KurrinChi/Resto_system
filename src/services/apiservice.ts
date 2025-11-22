@@ -1,5 +1,6 @@
 // Admin API Service for Firebase Backend Integration
 import axios from 'axios';
+import { getSessionUser } from './sessionService';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/admin';
 
@@ -11,6 +12,33 @@ export const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Attach request interceptor to always include current session user info / token
+api.interceptors.request.use((config) => {
+  try {
+    const user = getSessionUser();
+    if (user) {
+      // If backend expects Authorization header when a token exists
+      if (user.token) {
+        config.headers = {
+          ...config.headers,
+          Authorization: `Bearer ${user.token}`,
+        } as any;
+      }
+
+      // Also include a user id header so backend can easily identify the caller
+      config.headers = {
+        ...config.headers,
+        'X-User-Id': user.id,
+        'X-User-Name': user.name || (user as any).fullName || (user as any).displayName || undefined,
+      } as any;
+    }
+  } catch (err) {
+    // swallow errors to avoid blocking requests
+    console.error('apiservice interceptor error', err);
+  }
+  return config;
+}, (error) => Promise.reject(error));
 
 // ==================== Dashboard API ====================
 export const dashboardApi = {
@@ -120,6 +148,10 @@ export const ordersApi = {
     const response = await api.get(`/orders/${orderId}`);
     return response.data;
   },
+  create: async (orderData: any) => {
+    const response = await api.post('/orders', orderData);
+    return response.data;
+  },
   updateStatus: async (orderId: string, status: string) => {
     const response = await api.put(`/orders/${orderId}/status`, { status });
     return response.data;
@@ -185,17 +217,17 @@ export const settingsApi = {
 // ==================== Profile API ====================
 export const profileApi = {
   get: async () => {
-    const user = JSON.parse(sessionStorage.getItem('rs_current_user') || '{}');
+    const user = (getSessionUser() || {}) as any;
     const response = await api.get('/profile', { params: { userId: user.id, email: user.email } });
     return response.data;
   },
   update: async (profileData: any) => {
-    const user = JSON.parse(sessionStorage.getItem('rs_current_user') || '{}');
+    const user = (getSessionUser() || {}) as any;
     const response = await api.put('/profile', { ...profileData, userId: user.id, userEmail: user.email });
     return response.data;
   },
   changePassword: async (passwordData: { current_password: string; new_password: string }) => {
-    const user = JSON.parse(sessionStorage.getItem('rs_current_user') || '{}');
+    const user = (getSessionUser() || {}) as any;
     const response = await api.put('/profile/password', { ...passwordData, userId: user.id, userEmail: user.email });
     return response.data;
   },

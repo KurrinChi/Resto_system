@@ -178,7 +178,12 @@ export const TrackingTable: React.FC<TrackingTableProps> = ({
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-left">
                   <select
                     value={tracking.status}
-                    onChange={(e) => onUpdateStatus({...tracking, status: e.target.value})}
+                    onChange={(e) =>
+                      onUpdateStatus({
+                        ...tracking,
+                        status: e.target.value as CustomerTracking["status"],
+                      })
+                    }
                     className="px-3 py-1.5 rounded-lg text-sm border transition-all focus:outline-none focus:ring-2"
                     style={{
                       backgroundColor: THEME.colors.background.tertiary,
@@ -186,11 +191,9 @@ export const TrackingTable: React.FC<TrackingTableProps> = ({
                       borderColor: THEME.colors.border.DEFAULT,
                     }}
                   >
-                    <option value="received">Received</option>
                     <option value="preparing">Preparing</option>
-                    <option value="ready">Ready</option>
+                    <option value="out_for_delivery">Out for Delivery</option>
                     <option value="delivered">Delivered</option>
-                    <option value="completed">Completed</option>
                   </select>
                 </td>
               </tr>

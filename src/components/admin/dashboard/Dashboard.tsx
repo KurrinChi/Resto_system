@@ -419,7 +419,7 @@ export const Dashboard: React.FC = () => {
                       className="text-sm"
                       style={{ color: THEME.colors.text.primary }}
                     >
-                      Order {order.id} - {order.fullName} (${parseFloat(order.totalFee || 0).toFixed(2)})
+                      Order {order.id} - {order.customerFullName || order.fullName || order.name || 'Guest'} (${parseFloat(order.totalFee || 0).toFixed(2)})
                     </p>
                     <p
                       className="text-xs"

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="db.sqlite3" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="1"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="3122"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="orders" custom_title="0" dock_id="1" table="4,6:mainorders"/><dock_state state="000000ff00000000fd0000000100000002000005bb00000390fc0100000001fb000000160064006f0063006b00420072006f00770073006500310100000000000005bb0000012900ffffff000002850000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="auth_group" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="35"/><column index="2" value="40"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="menu_items" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="63"/><column index="2" value="103"/><column index="3" value="183"/><column index="4" value="300"/><column index="5" value="39"/><column index="6" value="59"/><column index="7" value="59"/><column index="8" value="108"/><column index="9" value="300"/><column index="10" value="300"/><column index="11" value="215"/><column index="12" value="215"/><column index="13" value="43"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="orders" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort><column index="0" mode="1"/></sort><column_widths><column index="1" value="71"/><column index="2" value="119"/><column index="3" value="95"/><column index="4" value="111"/><column index="5" value="300"/><column index="6" value="55"/><column index="7" value="87"/><column index="8" value="71"/><column index="9" value="87"/><column index="10" value="215"/><column index="11" value="215"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="users" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="231"/><column index="2" value="103"/><column index="3" value="247"/><column index="4" value="167"/><column index="5" value="95"/><column index="6" value="95"/><column index="7" value="95"/><column index="8" value="39"/><column index="9" value="71"/><column index="10" value="55"/><column index="11" value="300"/><column index="12" value="300"/><column index="13" value="95"/><column index="14" value="215"/><column index="15" value="215"/><column index="16" value="59"/><column index="17" value="215"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="SQL 1*">
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu002','Garlic Bread','Garlic Bread Sticks','Toasted bread with garlic butter',180,'cat001',1,10,'[&quot;bread&quot;, &quot;garlic&quot;, &quot;butter&quot;]','https://images.unsplash.com/photo-1573140401552-388e3aadb2b6','2025-11-21 23:47:31.075266','2025-11-21 23:47:31.075286', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu003','Bruschetta','Tomato Bruschetta','Grilled bread with tomatoes and basil',260,'cat001',1,12,'[&quot;tomatoes&quot;, &quot;basil&quot;, &quot;bread&quot;, &quot;olive oil&quot;]','https://images.unsplash.com/photo-1572695157366-5e585ab2b69f','2025-11-21 23:47:31.079434','2025-11-21 23:47:31.079456', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu004','Mozzarella Sticks','Fried Mozzarella','Breaded and fried mozzarella cheese',320,'cat001',1,15,'[&quot;mozzarella&quot;, &quot;breadcrumbs&quot;]','https://images.unsplash.com/photo-1531749668029-2db88e4276c7','2025-11-21 23:47:31.082758','2025-11-21 23:47:31.082777', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu005','Margherita Pizza','Classic Margherita','Fresh mozzarella, tomato sauce, basil',550,'cat002',1,20,'[&quot;dough&quot;, &quot;tomato sauce&quot;, &quot;mozzarella&quot;, &quot;basil&quot;]','https://images.unsplash.com/photo-1574071318508-1cdbab80d002','2025-11-21 23:47:31.088217','2025-11-21 23:47:31.088238', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu006','Pepperoni Pizza','Pepperoni Special','Classic pepperoni with cheese',620,'cat002',1,20,'[&quot;dough&quot;, &quot;tomato sauce&quot;, &quot;mozzarella&quot;, &quot;pepperoni&quot;]','https://images.unsplash.com/photo-1628840042765-356cda07504e','2025-11-21 23:47:31.093997','2025-11-21 23:47:31.094082', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu007','Grilled Chicken','Herb Grilled Chicken','Juicy chicken breast with herbs',480,'cat002',1,25,'[&quot;chicken&quot;, &quot;herbs&quot;, &quot;olive oil&quot;]','https://images.unsplash.com/photo-1598103442097-8b74394b95c6','2025-11-21 23:47:31.097279','2025-11-21 23:47:31.097296', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu008','Beef Burger','Classic Beef Burger','Angus beef patty with fresh vegetables',430,'cat002',1,18,'[&quot;beef&quot;, &quot;lettuce&quot;, &quot;tomato&quot;, &quot;bun&quot;, &quot;cheese&quot;]','https://images.unsplash.com/photo-1568901346375-23c9450c58cd','2025-11-21 23:47:31.101172','2025-11-21 23:47:31.101193', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu009','Pasta Carbonara','Creamy Carbonara','Pasta with bacon and cream sauce',390,'cat002',1,20,'[&quot;pasta&quot;, &quot;bacon&quot;, &quot;cream&quot;, &quot;parmesan&quot;]','https://images.unsplash.com/photo-1612874742237-6526221588e3','2025-11-21 23:47:31.106284','2025-11-21 23:47:31.106394', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu010','Salmon Steak','Grilled Salmon','Fresh salmon with lemon butter',890,'cat002',1,25,'[&quot;salmon&quot;, &quot;lemon&quot;, &quot;butter&quot;, &quot;herbs&quot;]','https://images.unsplash.com/photo-1467003909585-2f8a72700288','2025-11-21 23:47:31.110469','2025-11-21 23:47:31.110485', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu011','Vegetable Stir Fry','Asian Veggie Stir Fry','Mixed vegetables in Asian sauce',350,'cat002',1,15,'[&quot;broccoli&quot;, &quot;carrots&quot;, &quot;bell peppers&quot;, &quot;soy sauce&quot;]','https://images.unsplash.com/photo-1512058564366-18510be2db19','2025-11-21 23:47:31.114597','2025-11-21 23:47:31.114614', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu012','Fish Tacos','Baja Fish Tacos','Crispy fish with fresh slaw',420,'cat002',0,20,'[&quot;fish&quot;, &quot;tortilla&quot;, &quot;cabbage&quot;, &quot;sauce&quot;]','https://images.unsplash.com/photo-1551504734-5ee1c4a1479b','2025-11-21 23:47:31.120660','2025-11-21 23:47:31.120680', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu013','Chocolate Cake','Rich Chocolate Cake','Decadent chocolate layered cake',250,'cat003',1,10,'[&quot;chocolate&quot;, &quot;flour&quot;, &quot;eggs&quot;, &quot;sugar&quot;]','https://images.unsplash.com/photo-1578985545062-69928b1d9587','2025-11-21 23:47:31.123570','2025-11-21 23:47:31.123586', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu014','Tiramisu','Classic Tiramisu','Italian coffee-flavored dessert',280,'cat003',1,8,'[&quot;mascarpone&quot;, &quot;coffee&quot;, &quot;ladyfingers&quot;, &quot;cocoa&quot;]','https://images.unsplash.com/photo-1571877227200-a0d98ea607e9','2025-11-21 23:47:31.127154','2025-11-21 23:47:31.127172', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu015','Cheesecake','New York Cheesecake','Creamy classic cheesecake',300,'cat003',1,10,'[&quot;cream cheese&quot;, &quot;graham crackers&quot;, &quot;sugar&quot;]','https://images.unsplash.com/photo-1533134486753-c833f0ed4866','2025-11-21 23:47:31.130066','2025-11-21 23:47:31.130083', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu016','Ice Cream','Vanilla Ice Cream','Premium vanilla ice cream',150,'cat003',1,5,'[&quot;cream&quot;, &quot;vanilla&quot;, &quot;sugar&quot;]','https://images.unsplash.com/photo-1563805042-7684c019e1cb','2025-11-21 23:47:31.134011','2025-11-21 23:47:31.134029', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu017','Apple Pie','Homemade Apple Pie','Warm apple pie with cinnamon',240,'cat003',1,12,'[&quot;apples&quot;, &quot;cinnamon&quot;, &quot;pastry&quot;]','https://images.unsplash.com/photo-1535920527002-b35e96722eb9','2025-11-21 23:47:31.137029','2025-11-21 23:47:31.137046', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu018','Coca Cola','Coca Cola Classic','Refreshing cola drink',90,'cat004',1,2,'[&quot;cola&quot;]','https://images.unsplash.com/photo-1554866585-cd94860890b7','2025-11-21 23:47:31.141625','2025-11-21 23:47:31.141644', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu019','Fresh Orange Juice','Freshly Squeezed OJ','100% fresh orange juice',150,'cat004',1,5,'[&quot;oranges&quot;]','https://images.unsplash.com/photo-1600271886742-f049cd451bba','2025-11-21 23:47:31.144514','2025-11-21 23:47:31.144531', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu020','Iced Coffee','Cold Brew Coffee','Smooth cold brew coffee',140,'cat004',1,3,'[&quot;coffee&quot;, &quot;ice&quot;]','https://images.unsplash.com/photo-1517487881594-2787fef5ebf7','2025-11-21 23:47:31.148772','2025-11-21 23:47:31.148792', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu021','Lemonade','Fresh Lemonade','Homemade lemonade',120,'cat004',1,5,'[&quot;lemons&quot;, &quot;sugar&quot;, &quot;water&quot;]','https://images.unsplash.com/photo-1523677011781-c91d1bbe2f9f','2025-11-21 23:47:31.151806','2025-11-21 23:47:31.151824', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu022','Green Tea','Japanese Green Tea','Premium green tea',110,'cat004',1,4,'[&quot;green tea leaves&quot;]','https://images.unsplash.com/photo-1556679343-c7306c1976bc','2025-11-21 23:47:31.155577','2025-11-21 23:47:31.155596', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu023','French Fries','Crispy French Fries','Golden crispy fries',150,'cat005',1,10,'[&quot;potatoes&quot;, &quot;salt&quot;]','https://images.unsplash.com/photo-1573080496219-bb080dd4f877','2025-11-21 23:47:31.159469','2025-11-21 23:47:31.159488', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu024','Onion Rings','Crispy Onion Rings','Breaded and fried onion rings',170,'cat005',1,12,'[&quot;onions&quot;, &quot;breadcrumbs&quot;]','https://images.unsplash.com/photo-1639024471283-03518883512d','2025-11-21 23:47:31.162667','2025-11-21 23:47:31.162684', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu025','Coleslaw','Fresh Coleslaw','Creamy cabbage salad',130,'cat005',1,5,'[&quot;cabbage&quot;, &quot;carrots&quot;, &quot;mayo&quot;]','https://images.unsplash.com/photo-1626200419199-391ae4be7a41','2025-11-21 23:47:31.165628','2025-11-21 23:47:31.165645', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu026','Caesar Salad','Classic Caesar','Romaine lettuce with Caesar dressing',250,'cat005',1,8,'[&quot;romaine&quot;, &quot;parmesan&quot;, &quot;croutons&quot;, &quot;dressing&quot;]','https://images.unsplash.com/photo-1546793665-c74683f339c1','2025-11-21 23:47:31.169224','2025-11-21 23:47:31.169243', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu027','Mashed Potatoes','Creamy Mash','Smooth mashed potatoes',140,'cat005',1,15,'[&quot;potatoes&quot;, &quot;butter&quot;, &quot;milk&quot;]','https://images.unsplash.com/photo-1585307858364-2e6ecb3000c6','2025-11-21 23:47:31.172073','2025-11-21 23:47:31.172089', NULL);
+
+INSERT INTO &quot;menu_items&quot; VALUES
+('menu028','Rice Pilaf','Herb Rice Pilaf','Fluffy rice with herbs',120,'cat005',1,20,'[&quot;rice&quot;, &quot;herbs&quot;, &quot;butter&quot;]','https://images.unsplash.com/photo-1516684732162-798a0062be99','2025-11-21 23:47:31.175808','2025-11-21 23:47:31.175826', NULL);
+</sql><current_tab id="0"/></tab_sql></sqlb_project>

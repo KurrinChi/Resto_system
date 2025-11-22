@@ -3,6 +3,7 @@ import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
 import { Button } from '../../common/Button';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Phone, User, Edit } from 'lucide-react';
+import { setSessionUser, getSessionUser } from '../../../services/sessionService';
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
@@ -26,10 +27,9 @@ export const ProfilePage: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           setUser(data);
-          // refresh session storage with latest data
+          // refresh session storage with latest data via session service
           const merged = { ...parsed, ...data };
-          sessionStorage.setItem('rs_current_user', JSON.stringify(merged));
-          localStorage.setItem('rs_current_user', JSON.stringify(merged));
+          setSessionUser(merged as any);
         } else {
           setUser(parsed);
         }
@@ -51,12 +51,11 @@ export const ProfilePage: React.FC = () => {
         const parsed = JSON.parse(raw);
         if (!parsed.id) return;
         const res = await fetch(`http://localhost:8000/api/auth/user/${parsed.id}/`);
-        if (res.ok) {
+          if (res.ok) {
           const data = await res.json();
           setUser(prev => ({ ...(prev || {}), ...data }));
           const merged = { ...parsed, ...data };
-          sessionStorage.setItem('rs_current_user', JSON.stringify(merged));
-          localStorage.setItem('rs_current_user', JSON.stringify(merged));
+          setSessionUser(merged as any);
         }
       } catch {/* ignore */}
     };

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect} from 'react';
 import type { AdminUser } from '../types';
 import type { ReactNode } from 'react';
 import { profileApi } from '../services/apiservice';
+import { getSessionUser, setSessionUser } from '../services/sessionService';
 
 interface AdminContextType {
   // Current page tracking
@@ -29,19 +30,18 @@ export const AdminProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   // Initialize adminUser from sessionStorage
   const getInitialUser = (): AdminUser | null => {
     try {
-      const storedUser = sessionStorage.getItem('rs_current_user');
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
+      const stored = getSessionUser();
+      if (stored) {
         return {
-          id: user.id || '1',
-          name: user.name || 'Admin User',
-          email: user.email || 'admin@restauranthub.com',
-          role: user.role || 'Administrator',
-          avatar: user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'Admin User')}&background=3b82f6&color=fff`,
+          id: stored.id || '1',
+          name: stored.name || 'Admin User',
+          email: stored.email || 'admin@restauranthub.com',
+          role: stored.role || 'Administrator',
+          avatar: stored.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(stored.name || 'Admin User')}&background=3b82f6&color=fff`,
         };
       }
     } catch (error) {
-      console.error('Error loading user from sessionStorage:', error);
+      console.error('Error loading user from session storage service:', error);
     }
     return {
       id: '1',
@@ -72,15 +72,16 @@ export const AdminProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         console.log('Setting admin user to:', updatedUser);
         setAdminUser(updatedUser);
         
-        // Also update sessionStorage to keep it in sync
-        sessionStorage.setItem('rs_current_user', JSON.stringify({
+        // Also update session storage service to keep it in sync
+        setSessionUser({
           id: updatedUser.id,
           name: updatedUser.name,
           email: updatedUser.email,
           role: updatedUser.role,
           phoneNumber: profileData.phone || '',
           avatar: updatedUser.avatar,
-        }));
+          token: undefined,
+        });
       }
     } catch (error) {
       console.error('Failed to refresh profile:', error);

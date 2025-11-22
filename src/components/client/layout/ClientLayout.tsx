@@ -18,9 +18,10 @@ export const ClientLayout: React.FC<ClientLayoutProps> = ({ children }) => {
   const mapRef = React.useRef<any>(null);
 
   const handleLocationSelect = () => {
-    // Trigger event for header to refresh address
-    window.dispatchEvent(new Event('addressUpdated'));
+    // Close modal then dispatch the selected address as event detail so listeners can update
     setMapOpen(false);
+    const address = localStorage.getItem('userAddress') || '';
+    window.dispatchEvent(new CustomEvent('addressUpdated', { detail: address }));
   };
 
   const handleSearchResult = (result: any) => {

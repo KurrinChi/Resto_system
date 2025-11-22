@@ -6,8 +6,11 @@ import { Button } from '../../common/Button';
 import { Input } from '../../common/Input';
 import { Toast } from '../../common/Toast';
 import { useCart } from '../cart/CartContext';
+import { ordersApi } from '../../../services/apiservice';
+import { getSessionUser } from '../../../services/sessionService';
 import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
 
+import { resolveImage } from '../../../utils/imageUtils';
 const PLACEHOLDER_IMG = new URL('../../../assets/placeholder.png', import.meta.url).href;
 
 type DeliveryOption = 'standard' | 'scheduled';
@@ -119,7 +122,7 @@ const Checkout: React.FC = () => {
     setSelectedDate(date);
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (items.length === 0) {
       alert('Your cart is empty!');
       return;
@@ -138,32 +141,57 @@ const Checkout: React.FC = () => {
       }
     }
 
-    // Prepare order data
-    const orderData = {
-      items,
-      deliveryAddress,
-      noteToDriver,
-      deliveryOption,
-      scheduledDate: deliveryOption === 'scheduled' ? selectedDate : null,
-      scheduledTime: deliveryOption === 'scheduled' ? selectedTimeSlot : null,
-      paymentMethod,
-      subtotal: total,
-      total: total,
-      orderDate: new Date().toISOString(),
-    };
+    // Prepare order data mapping to backend shape
+    try {
+      const user = getSessionUser();
+      const userId = user?.id || (user as any)?.userId || (user as any)?.uid || '';
 
-    console.log('Order placed:', orderData);
-    
-    // Clear cart
-    clearCart();
-    
-    // Show success toast
-    setToastMessage('Order Successfully Created');
-    
-    // Navigate to orders page after delay
-    setTimeout(() => {
-      navigate('/client/orders');
-    }, 2000);
+      const orderList = items.map((it: any) => ({
+        menuId: it.id,
+        name: it.name,
+        qty: it.qty,
+        unitPrice: it.price,
+        lineTotal: Number((it.price * it.qty).toFixed(2)),
+      }));
+
+      const sessionName = user?.name || (user as any)?.fullName || (user as any)?.displayName || null;
+
+      const orderPayload = {
+        orderList,
+        deliveryAddress,
+        fullAddress: deliveryAddress,
+        noteToDriver,
+        deliveryOption,
+        scheduledDate: deliveryOption === 'scheduled' && selectedDate ? selectedDate.toISOString() : null,
+        scheduledTime: deliveryOption === 'scheduled' ? selectedTimeSlot : null,
+        paymentMethod,
+        itemsSubtotal: Number(total.toFixed(2)),
+        totalFee: Number(total.toFixed(2)),
+        orderDate: new Date().toISOString(),
+        orderType: orderType.toUpperCase(),
+        // Client sets preparing to match desired workflow; backend also forces preparing as authoritative
+        orderStatus: 'preparing',
+        orderStatusIndex: 1,
+        userId,
+        // Link orders by full name when id is not provided; default to 'Unknown'
+        customerFullName: sessionName || 'Unknown',
+        isGuestOrder: !userId,
+      };
+
+      // Call backend to create order
+      const created = await ordersApi.create(orderPayload);
+      console.log('Order created:', created);
+
+      // On success clear cart and notify user
+      clearCart();
+      setToastMessage('Order Successfully Created');
+      setTimeout(() => {
+        navigate('/client/orders');
+      }, 1200);
+    } catch (err: any) {
+      console.error('Failed to create order', err);
+      alert('Failed to create order. Please try again.');
+    }
   };
 
   const subtotal = total;

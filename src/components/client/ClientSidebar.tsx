@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Home, Menu, ShoppingCart, User, LogOut } from 'lucide-react';
 import { THEME } from '../../constants/theme';
+import { setSessionUser } from '../../services/sessionService';
 import { BRANDING } from '../../constants/branding';
 
 const clientMenu = [
@@ -18,8 +19,8 @@ export const ClientSidebar: React.FC = () => {
   const handleLogout = () => {
     // Clear any stored user data
     try {
-      sessionStorage.removeItem('rs_current_user');
-      localStorage.removeItem('rs_current_user');
+      // centralize logout
+      setSessionUser(null as any);
       localStorage.removeItem('userAddress');
       localStorage.removeItem('orderType');
       localStorage.removeItem('rs_cart_v1');

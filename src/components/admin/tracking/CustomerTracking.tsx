@@ -30,7 +30,8 @@ export const CustomerTracking: React.FC = () => {
           .map((order: any) => ({
             orderId: order.id,
             orderNumber: order.id,
-            customerName: order.fullName || 'Customer',
+            // Prefer the newer `customerFullName`, fall back to older fields if absent
+            customerName: order.customerFullName || order.fullName || order.name || 'Customer',
             status: order.orderStatus,
             estimatedDelivery: order.createdAt,
             location: order.address || undefined,

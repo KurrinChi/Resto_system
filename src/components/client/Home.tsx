@@ -9,129 +9,10 @@ import { Toast } from '../common/Toast';
 import { CLIENT_THEME as THEME } from '../../constants/clientTheme';
 import { useCart } from './cart/CartContext';
 import { useNavigate } from 'react-router-dom';
+import { menuApi } from '../../services/apiservice';
+import { resolveImage } from '../../utils/imageUtils';
 
-const promotionsData = [
-  { 
-    id: 1, 
-    name: 'Summer BBQ Special', 
-    price: 15.99, 
-    originalPrice: 22.99,
-    description: 'Grilled chicken, corn, BBQ sauce',
-    image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=300&fit=crop',
-    discount: 30,
-    badge: 'Limited Time'
-  },
-  { 
-    id: 2, 
-    name: 'Family Feast Bundle', 
-    price: 39.99, 
-    originalPrice: 55.00,
-    description: 'Pizza, pasta, salad, and dessert',
-    image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=300&fit=crop',
-    discount: 27,
-    badge: 'Best Value'
-  },
-  { 
-    id: 3, 
-    name: 'Breakfast Combo', 
-    price: 9.99, 
-    originalPrice: 14.50,
-    description: 'Eggs, bacon, toast, and coffee',
-    image: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=400&h=300&fit=crop',
-    discount: 31,
-    badge: 'Morning Deal'
-  },
-  { 
-    id: 4, 
-    name: 'Seafood Platter', 
-    price: 28.99, 
-    originalPrice: 38.00,
-    description: 'Shrimp, fish, calamari with lemon',
-    image: 'https://images.unsplash.com/photo-1559181567-c3190ca9959b?w=400&h=300&fit=crop',
-    discount: 24,
-    badge: 'Fresh Daily'
-  },
-  { 
-    id: 5, 
-    name: 'Double Cheeseburger Meal', 
-    price: 12.99, 
-    originalPrice: 18.99,
-    description: 'Two beef patties, cheese, fries, drink',
-    image: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&h=300&fit=crop',
-    discount: 32,
-    badge: 'Hot Deal'
-  },
-  { 
-    id: 6, 
-    name: 'Sushi Lover Pack', 
-    price: 24.99, 
-    originalPrice: 35.00,
-    description: '20 pieces assorted sushi and rolls',
-    image: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400&h=300&fit=crop',
-    discount: 29,
-    badge: 'Chef Special'
-  },
-  { 
-    id: 7, 
-    name: 'Pasta Night Bundle', 
-    price: 19.99, 
-    originalPrice: 28.50,
-    description: 'Two pasta dishes, garlic bread, dessert',
-    image: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&h=300&fit=crop',
-    discount: 30,
-    badge: 'Popular'
-  },
-  { 
-    id: 8, 
-    name: 'Taco Tuesday Special', 
-    price: 8.99, 
-    originalPrice: 13.99,
-    description: '5 tacos, chips, salsa, and guacamole',
-    image: 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400&h=300&fit=crop',
-    discount: 36,
-    badge: 'Tuesday Only'
-  },
-  { 
-    id: 9, 
-    name: 'Steak Dinner Deluxe', 
-    price: 32.99, 
-    originalPrice: 45.00,
-    description: 'Prime ribeye, mashed potatoes, vegetables',
-    image: 'https://images.unsplash.com/photo-1600891964092-4316c288032e?w=400&h=300&fit=crop',
-    discount: 27,
-    badge: 'Premium'
-  },
-  { 
-    id: 10, 
-    name: 'Vegan Buddha Bowl', 
-    price: 11.99, 
-    originalPrice: 16.50,
-    description: 'Quinoa, roasted veggies, tahini dressing',
-    image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop',
-    discount: 27,
-    badge: 'Healthy Choice'
-  },
-  { 
-    id: 11, 
-    name: 'Wings & Beer Combo', 
-    price: 17.99, 
-    originalPrice: 25.00,
-    description: '12 wings, choice of sauce, craft beer',
-    image: 'https://images.unsplash.com/photo-1608039829572-78524f79c4c7?w=400&h=300&fit=crop',
-    discount: 28,
-    badge: 'Game Day'
-  },
-  { 
-    id: 12, 
-    name: 'Dessert Sampler', 
-    price: 14.99, 
-    originalPrice: 21.00,
-    description: 'Cheesecake, brownie, ice cream, tiramisu',
-    image: 'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=400&h=300&fit=crop',
-    discount: 29,
-    badge: 'Sweet Deal'
-  },
-];
+const mockPromotions = [];
 
 const bestSellersData = [
   { 
@@ -235,6 +116,9 @@ export const Home: React.FC = () => {
   const promotionScrollRef = React.useRef<HTMLDivElement>(null);
   const { addItem } = useCart();
   const navigate = useNavigate();
+  const [menuItems, setMenuItems] = React.useState<any[]>([]);
+  const [loadingMenu, setLoadingMenu] = React.useState<boolean>(false);
+  const [menuError, setMenuError] = React.useState<string | null>(null);
 
   // Add keyframe animations on mount
   React.useEffect(() => {
@@ -301,6 +185,96 @@ export const Home: React.FC = () => {
     return () => window.removeEventListener('searchQuery', handleSearch);
   }, []);
 
+  // Fetch menu items from backend and derive sections
+  React.useEffect(() => {
+    let mounted = true;
+    const fetchMenu = async () => {
+      setLoadingMenu(true);
+      setMenuError(null);
+      try {
+        const resp = await menuApi.getAll();
+        // `menuApi.getAll()` returns { success?: boolean, data?: any } or raw data depending on backend
+        const data = resp && resp.data ? resp.data : resp;
+        if (Array.isArray(data) && mounted) {
+          setMenuItems(data);
+        } else if (mounted) {
+          setMenuItems([]);
+        }
+      } catch (err: any) {
+        console.error('Failed to fetch menu items:', err);
+        if (mounted) {
+          setMenuError(err?.message || 'Failed to load menu');
+          setMenuItems([]);
+        }
+      } finally {
+        if (mounted) setLoadingMenu(false);
+      }
+    };
+
+    fetchMenu();
+    return () => { mounted = false; };
+  }, []);
+
+  // Derive top spot, best sellers, recommended from fetched menuItems (fallback heuristics)
+  const topSpot = React.useMemo(() => {
+    if (!menuItems || menuItems.length === 0) return null;
+    // Prefer explicit `soldCount`, else `rating`, else first item
+    const withSold = menuItems.filter((m: any) => typeof m.soldCount === 'number');
+    if (withSold.length) return withSold.sort((a: any,b: any)=>b.soldCount - a.soldCount)[0];
+    const withRating = menuItems.filter((m: any) => typeof m.rating === 'number');
+    if (withRating.length) return withRating.sort((a: any,b: any)=>b.rating - a.rating)[0];
+    return menuItems[0];
+  }, [menuItems]);
+
+  const bestSellers = React.useMemo(() => {
+    if (!menuItems || menuItems.length === 0) return [];
+    // Top 4 by soldCount if available, otherwise by rating
+    const bySold = menuItems.filter((m: any) => typeof m.soldCount === 'number').sort((a: any,b: any)=>b.soldCount - a.soldCount);
+    if (bySold.length) return bySold.slice(0,4);
+    const byRating = menuItems.filter((m: any)=>typeof m.rating === 'number').sort((a: any,b: any)=>b.rating - a.rating);
+    if (byRating.length) return byRating.slice(0,4);
+
+    // Fallback: pick up to 4 random items from the menu excluding Top Spot
+    const excludeIds = new Set<any>();
+    if (topSpot && topSpot.id !== undefined) excludeIds.add(topSpot.id);
+    const pool = menuItems.filter((m: any) => !excludeIds.has(m.id));
+    const shuffled = [...pool];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = shuffled[i];
+      shuffled[i] = shuffled[j];
+      shuffled[j] = tmp;
+    }
+    return shuffled.slice(0, 4);
+  }, [menuItems]);
+
+  const recommended = React.useMemo(() => {
+    if (!menuItems || menuItems.length === 0) return [];
+    // Items tagged as 'recommended' or with a `recommended` flag
+    const tagged = menuItems.filter((m: any) => m.recommended || (Array.isArray(m.tags) && m.tags.includes('Recommended')));
+    if (tagged.length) return tagged.slice(0,6);
+    // fallback: take popular/rated items
+    // fallback: pick random items from the menu excluding topSpot and bestSellers
+    const excludeIds = new Set<any>();
+    if (topSpot && topSpot.id !== undefined) excludeIds.add(topSpot.id);
+    (bestSellers || []).forEach((b: any) => { if (b && b.id !== undefined) excludeIds.add(b.id); });
+
+    const candidates = menuItems.filter((m: any) => !excludeIds.has(m.id));
+    // If no candidates left after exclusion, fall back to full menu
+    const pool = candidates.length > 0 ? candidates : menuItems;
+
+    // Shuffle pool (Fisher-Yates) and take up to 6
+    const shuffled = [...pool];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = shuffled[i];
+      shuffled[i] = shuffled[j];
+      shuffled[j] = tmp;
+    }
+
+    return shuffled.slice(0, 6);
+  }, [menuItems, bestSellers]);
+
   // Listen for address update events
   React.useEffect(() => {
     const handleAddressUpdate = () => {
@@ -338,9 +312,14 @@ export const Home: React.FC = () => {
     );
   };
 
+  // Derive promotions from menu items (items with discount/promotion flag), fallback to first 12
+  const promotionsData = menuItems && menuItems.length > 0
+    ? menuItems.filter((m: any) => m.discount || m.promotion).slice(0, 12)
+    : mockPromotions.slice(0, 12);
+
   const filteredPromotions = filterBySearch(promotionsData);
-  const filteredBestSellers = filterBySearch(bestSellersData);
-  const filteredRecommended = filterBySearch(recommendedData);
+  const filteredBestSellers = filterBySearch(bestSellers);
+  const filteredRecommended = filterBySearch(recommended);
 
   return (
     <div className="space-y-6">
@@ -412,7 +391,7 @@ export const Home: React.FC = () => {
             {/* Left Arrow */}
             <button
               onClick={() => scrollPromotions('left')}
-              className="p-1.5 rounded-lg hover:bg-opacity-80 transition flex-shrink-0"
+              className="p-1.5 rounded-lg hover:bg-opacity-80 transition shrink-0"
               style={{ backgroundColor: '#2a2a2a' }}
             >
               <ChevronLeft className="w-4 h-4" style={{ color: '#ffffff' }} />
@@ -439,7 +418,7 @@ export const Home: React.FC = () => {
             >
               <div className="relative">
                 <img 
-                  src={promo.image} 
+                  src={resolveImage(promo.image, PLACEHOLDER_IMG)} 
                   alt={promo.name} 
                   className="w-full h-40 object-cover"
                   onError={(e) => {
@@ -478,13 +457,38 @@ export const Home: React.FC = () => {
             {/* Right Arrow */}
             <button
               onClick={() => scrollPromotions('right')}
-              className="p-1.5 rounded-lg hover:bg-opacity-80 transition flex-shrink-0"
+              className="p-1.5 rounded-lg hover:bg-opacity-80 transition shrink-0"
               style={{ backgroundColor: '#2a2a2a' }}
             >
               <ChevronRight className="w-4 h-4" style={{ color: '#ffffff' }} />
             </button>
           </div>
         )}
+      
+      {/* Top Spot (highlight single item identified from menu) */}
+      {topSpot && (
+        <div className="rounded-3xl p-6" style={{ backgroundColor: THEME.colors.background.secondary }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-semibold" style={{ color: THEME.colors.text.primary }}>Top Spot</h2>
+            <div className="text-sm font-medium" style={{ color: THEME.colors.text.tertiary }}>Featured</div>
+          </div>
+          <Card padding="none" style={{ backgroundColor: THEME.colors.background.tertiary, borderColor: THEME.colors.border.DEFAULT }}>
+            <div className="flex flex-col sm:flex-row">
+              <div className="sm:w-1/3">
+                <img src={resolveImage(topSpot.image, PLACEHOLDER_IMG)} alt={topSpot.name} className="w-full h-40 object-cover" onError={(e)=>{(e.target as HTMLImageElement).src = PLACEHOLDER_IMG}} />
+              </div>
+              <div className="p-4 flex-1">
+                <h3 className="text-lg font-semibold" style={{ color: THEME.colors.text.primary }}>{topSpot.name}</h3>
+                <p className="text-sm" style={{ color: THEME.colors.text.tertiary }}>{topSpot.description}</p>
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-xl font-bold" style={{ color: THEME.colors.primary.DEFAULT }}>₱{topSpot.price}</span>
+                  <div className="text-sm text-green-500 font-semibold">Top Seller</div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
       </div>
 
       {/* Best Sellers Section */}
@@ -519,7 +523,7 @@ export const Home: React.FC = () => {
             >
               <div className="relative">
                 <img 
-                  src={item.image} 
+                  src={resolveImage(item.image, PLACEHOLDER_IMG)} 
                   alt={item.name} 
                   className="w-full h-40 object-cover"
                   onError={(e) => {
@@ -586,7 +590,7 @@ export const Home: React.FC = () => {
             >
               <div className="relative">
                 <img 
-                  src={item.image} 
+                  src={resolveImage(item.image, PLACEHOLDER_IMG)} 
                   alt={item.name} 
                   className="w-full h-48 object-cover"
                   onError={(e) => {
@@ -596,7 +600,7 @@ export const Home: React.FC = () => {
                 />
                 
                 <div className="absolute bottom-2 left-2 flex gap-1 flex-wrap">
-                  {item.tags.map((tag, idx) => (
+                  {(item.tags || []).map((tag, idx) => (
                     <span 
                       key={idx}
                       className="px-2 py-1 rounded text-xs font-medium"

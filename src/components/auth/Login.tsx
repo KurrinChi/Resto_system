@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CLIENT_THEME as THEME } from '../../constants/clientTheme';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
+import { getSessionUser, setSessionUser } from '../../services/sessionService';
 
 export const Login: React.FC = () => {
   const [user, setUser] = React.useState('');
@@ -9,16 +10,15 @@ export const Login: React.FC = () => {
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const navigate = useNavigate();
-  const [sessionUser, setSessionUser] = React.useState<any>(null);
+  const [storedSession, setStoredSession] = React.useState<any>(null);
   const [checkingSession, setCheckingSession] = React.useState(true);
 
   // If a session exists, offer to continue or switch accounts instead of auto-redirecting
   React.useEffect(() => {
     try {
-      const raw = sessionStorage.getItem('rs_current_user') || localStorage.getItem('rs_current_user');
-      setSessionUser(raw ? JSON.parse(raw) : null);
+      setStoredSession(getSessionUser());
     } catch {
-      setSessionUser(null);
+      setStoredSession(null);
     } finally {
       setCheckingSession(false);
     }
@@ -67,12 +67,8 @@ export const Login: React.FC = () => {
           avatar: data.avatar || ''
         };
         try {
-          sessionStorage.setItem('rs_current_user', JSON.stringify(sessionUser));
-          // Keep localStorage for legacy components that still read it (optional)
-          localStorage.setItem('rs_current_user', JSON.stringify(sessionUser));
-          
-          // Dispatch custom event to notify AdminContext
-          window.dispatchEvent(new Event('rs_user_updated'));
+          // Use centralized session service so all parts of app stay in sync
+          setSessionUser(sessionUser);
         } catch (storageErr) {
           console.warn('Failed to persist session user:', storageErr);
         }
@@ -134,21 +130,21 @@ export const Login: React.FC = () => {
         >
         <div className="w-full max-w-md">
           {/* Existing session notice */}
-          {!checkingSession && sessionUser && (
+          {!checkingSession && storedSession && (
             <div className="mb-6 rounded-lg p-4" style={{ backgroundColor: THEME.colors.background.secondary, border: `1px solid ${THEME.colors.border.DEFAULT}` }}>
               <div className="mb-3">
                 <div className="text-sm" style={{ color: THEME.colors.text.tertiary }}>
                   You are signed in as
                 </div>
                 <div className="text-base font-medium" style={{ color: THEME.colors.text.primary }}>
-                  {sessionUser.name || sessionUser.email} ({sessionUser.role})
+                  {storedSession?.name || storedSession?.email} ({storedSession?.role})
                 </div>
               </div>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => {
-                    if (sessionUser.role === 'Admin') navigate('/admin'); else navigate('/client');
+                    if (storedSession?.role?.toUpperCase() === 'ADMIN') navigate('/admin'); else navigate('/client');
                   }}
                   className="px-4 py-2 rounded-lg font-semibold"
                   style={{ backgroundColor: THEME.colors.primary.DEFAULT, color: '#fff' }}
@@ -158,8 +154,8 @@ export const Login: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    try { sessionStorage.removeItem('rs_current_user'); localStorage.removeItem('rs_current_user'); } catch {}
-                    setSessionUser(null);
+                    try { setSessionUser(null as any); } catch {}
+                    setStoredSession(null);
                   }}
                   className="px-4 py-2 rounded-lg font-semibold border"
                   style={{

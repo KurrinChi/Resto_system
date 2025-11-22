@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from '../../common/Card';
 import { Button } from '../../common/Button';
 import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
+import { resolveImage } from '../../../utils/imageUtils';
 
 const PLACEHOLDER_IMG = new URL('../../../assets/placeholder.png', import.meta.url).href;
 
@@ -47,7 +48,7 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onAddToOrder, 
       <div>
         <div className="h-36 rounded-lg mb-3 relative overflow-hidden">
           <img 
-            src={item.image || PLACEHOLDER_IMG} 
+            src={resolveImage(item.image, PLACEHOLDER_IMG)} 
             alt={item.name}
             className="w-full h-full object-cover"
             onError={(e) => {

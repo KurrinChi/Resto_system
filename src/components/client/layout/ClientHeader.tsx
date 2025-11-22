@@ -7,6 +7,7 @@ import { CartIndicator } from '../components/CartIndicator';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../cart/CartContext';
 import { Button } from '../../common/Button';
+import { setSessionUser, getSessionUser } from '../../../services/sessionService';
 
 export const ClientHeader: React.FC = () => {
   const [search, setSearch] = React.useState('');
@@ -59,10 +60,9 @@ export const ClientHeader: React.FC = () => {
           setAddress(data.address || 'Select delivery address');
           setUserName(data.fullName || currentUser.fullName || 'Guest');
           setUserAvatar(data.avatar || currentUser.avatar || undefined);
-          // update session/local user object with fresh data
+          // update session/local user object with fresh data via session service
           const updated = { ...currentUser, address: data.address, fullName: data.fullName, avatar: data.avatar };
-          sessionStorage.setItem('rs_current_user', JSON.stringify(updated));
-          localStorage.setItem('rs_current_user', JSON.stringify(updated));
+          try { setSessionUser(updated as any); } catch {}
         } else {
           // fallback to existing stored address
           setAddress(currentUser.address || 'Select delivery address');
@@ -87,14 +87,13 @@ export const ClientHeader: React.FC = () => {
       if (!currentUser.id) return;
       try {
         const res = await fetch(`http://localhost:8000/api/auth/user/${currentUser.id}/`);
-        if (res.ok) {
+          if (res.ok) {
           const data = await res.json();
           setAddress(data.address || 'Select delivery address');
           setUserName(data.fullName || currentUser.fullName || 'Guest');
           setUserAvatar(data.avatar || currentUser.avatar || undefined);
           const updated = { ...currentUser, address: data.address, fullName: data.fullName, avatar: data.avatar };
-          sessionStorage.setItem('rs_current_user', JSON.stringify(updated));
-          localStorage.setItem('rs_current_user', JSON.stringify(updated));
+          try { setSessionUser(updated as any); } catch {}
         }
       } catch {/* ignore */}
     };

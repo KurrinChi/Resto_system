@@ -296,8 +296,12 @@ export const Sidebar: React.FC = () => {
                   onClick={() => {
                     setShowProfileMenu(false);
                     try {
-                      sessionStorage.removeItem('rs_current_user');
-                      localStorage.removeItem('rs_current_user');
+                      // centralized logout
+                      // import setSessionUser at top of file
+                      // remove legacy admin token as well
+                      // eslint-disable-next-line @typescript-eslint/no-var-requires
+                      const { setSessionUser } = require('../../../services/sessionService');
+                      setSessionUser(null as any);
                       localStorage.removeItem('rs_admin_token');
                     } catch {}
                     window.location.href = '/login';
@@ -372,8 +376,8 @@ export const Sidebar: React.FC = () => {
                   onClick={() => {
                     setShowProfileMenu(false);
                     try {
-                      sessionStorage.removeItem('rs_current_user');
-                      localStorage.removeItem('rs_current_user');
+                      const { setSessionUser } = require('../../../services/sessionService');
+                      setSessionUser(null as any);
                       localStorage.removeItem('rs_admin_token');
                     } catch {}
                     window.location.href = '/login';
@@ -682,8 +686,8 @@ export const Sidebar: React.FC = () => {
                   onClick={() => {
                     setShowMobileProfileMenu(false);
                     try {
-                      sessionStorage.removeItem('rs_current_user');
-                      localStorage.removeItem('rs_current_user');
+                      const { setSessionUser } = require('../../../services/sessionService');
+                      setSessionUser(null as any);
                       localStorage.removeItem('rs_admin_token');
                     } catch {}
                     window.location.href = '/login';

@@ -1,18 +1,12 @@
 import React from 'react';
 import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
 import { Button } from '../../common/Button';
+import { getSessionUser, setSessionUser } from '../../../services/sessionService';
 import { useNavigate } from 'react-router-dom';
 
 export const ProfileView: React.FC = () => {
   const navigate = useNavigate();
-  const user = React.useMemo(() => {
-    try {
-      const raw = localStorage.getItem('rs_current_user');
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }, []);
+  const user = React.useMemo(() => getSessionUser(), []);
 
   if (!user) return <div style={{ color: THEME.colors.text.tertiary }}>Not signed in.</div>;
 
@@ -31,8 +25,7 @@ export const ProfileView: React.FC = () => {
           <Button variant="danger" onClick={() => {
             if (confirm('Are you sure you want to logout?')) {
               try {
-                sessionStorage.removeItem('rs_current_user');
-                localStorage.removeItem('rs_current_user');
+                setSessionUser(null as any);
               } catch {}
               window.location.href = '/login';
             }

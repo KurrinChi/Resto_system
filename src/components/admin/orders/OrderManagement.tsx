@@ -37,7 +37,8 @@ export const OrderManagement: React.FC = () => {
           id: order.id,
           orderNumber: order.id || `ORD-${order.id.slice(0, 8)}`,
           customerId: order.userId || order.id,
-          customerName: order.fullName || 'Guest',
+          // Prefer the new `customerFullName` field stored by the backend; fall back to older fields
+          customerName: order.customerFullName || order.fullName || order.name || 'Guest',
           items: (order.orderList || []).map((item: any) => ({
             menuItemId: item.id,
             name: item.name,

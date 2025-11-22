@@ -9,14 +9,41 @@ class OrderViewSet(viewsets.ViewSet):
 
     def list(self, request):
         orders = list_documents(self.collection)
+        # Allow filtering by user identity so clients only receive their own orders.
+        # Preference: query param `userId`, fallback to header `X-User-Id`.
+        user_id = request.query_params.get('userId') or request.META.get('HTTP_X_USER_ID')
+        user_name = request.query_params.get('userName') or request.META.get('HTTP_X_USER_NAME')
+        if user_id:
+            try:
+                orders = [o for o in orders if (o.get('userId') or o.get('user') or '') == user_id]
+            except Exception:
+                pass
+        elif user_name:
+            safe_name = user_name.strip().lower()
+            try:
+                orders = [
+                    o for o in orders
+                    if safe_name and str(o.get('customerFullName') or o.get('customerName') or '').strip().lower() == safe_name
+                ]
+            except Exception:
+                pass
         return Response(orders)
 
 
     def create(self, request):
         from datetime import datetime
         data = request.data.copy()
+        # Determine customer full name via payload or headers
+        customer_name = data.get('customerFullName') or data.get('customerName')
+        header_name = request.META.get('HTTP_X_USER_NAME')
+        if not customer_name and header_name:
+            customer_name = header_name
+        if not customer_name:
+            customer_name = 'Unknown'
+
         order_doc = {
             'createdAt': datetime.utcnow(),
+            'customerFullName': customer_name,
             'dayKey': data.get('dayKey', ''),
             'deliveryAddress': data.get('deliveryAddress', {}),
             'contactPhone': data.get('contactPhone', ''),
@@ -33,8 +60,9 @@ class OrderViewSet(viewsets.ViewSet):
             'notes': data.get('notes', ''),
             'quantity': int(data.get('quantity', 1)),
             'unitPrice': float(data.get('unitPrice', 0)),
-            'orderStatus': data.get('orderStatus', ''),
-            'orderStatusIndex': int(data.get('orderStatusIndex', 0)),
+            # Force initial status to 'preparing' to ensure admin workflow starts correctly
+            'orderStatus': 'preparing',
+            'orderStatusIndex': 1,
             'orderType': data.get('orderType', ''),
             'paymentMethod': data.get('paymentMethod', ''),
             'statusHistory': data.get('statusHistory', []),
@@ -61,6 +89,7 @@ class OrderViewSet(viewsets.ViewSet):
         from datetime import datetime
         data = request.data.copy()
         order_doc = {
+            'customerFullName': data.get('customerFullName', ''),
             'dayKey': data.get('dayKey', ''),
             'deliveryAddress': data.get('deliveryAddress', {}),
             'contactPhone': data.get('contactPhone', ''),

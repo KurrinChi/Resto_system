@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
+import { setSessionUser } from '../../../services/sessionService';
 import { createPortal } from "react-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -375,10 +376,9 @@ const Map = forwardRef<{ handleSelectSearchResult: (result: any) => void }, MapP
           });
           
           if (updateResponse.ok) {
-            // Update local session storage with new address
+            // Update centralized session storage with new address
             currentUser.address = address;
-            sessionStorage.setItem('rs_current_user', JSON.stringify(currentUser));
-            localStorage.setItem('rs_current_user', JSON.stringify(currentUser));
+            try { setSessionUser(currentUser); } catch {}
           }
         }
       } catch (err) {
