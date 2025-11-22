@@ -52,3 +52,4 @@ urllib3==2.5.0
 python-dotenv
 django-vite
 djangorestframework-simplejwt
+Pillow

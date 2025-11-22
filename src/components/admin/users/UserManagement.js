@@ -31,8 +31,8 @@ export const UserManagement = () => {
                         id: user.id,
                         name: user.fullName || user.full_name || user.username || user.email?.split('@')[0] || 'Unknown',
                         email: user.email || '',
-                        role: (user.role || 'customer').toLowerCase(),
-                        status: (user.status || 'active').toLowerCase(),
+                        role: (user.role || 'CUSTOMER'),
+                        status: (user.status || 'ACTIVE'),
                         phone: user.phoneNumber || user.phone || '',
                         dateJoined: user.createdAt || user.created_at || new Date().toISOString().split('T')[0],
                         avatar: user.avatar || user.avatar_url || ''
@@ -125,12 +125,12 @@ export const UserManagement = () => {
                                     color: THEME.colors.text.primary,
                                     borderWidth: "1px",
                                     borderColor: THEME.colors.border.DEFAULT,
-                                }, children: [_jsx("option", { value: "all", children: "All Roles" }), _jsx("option", { value: "admin", children: "Admin" }), _jsx("option", { value: "manager", children: "Manager" }), _jsx("option", { value: "staff", children: "Staff" }), _jsx("option", { value: "customer", children: "Customer" })] }) }), _jsx("div", { children: _jsxs("select", { value: filterStatus, onChange: (e) => setFilterStatus(e.target.value), className: "w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 transition-all", style: {
+                                }, children: [_jsx("option", { value: "all", children: "All Roles" }), _jsx("option", { value: "ADMIN", children: "Admin" }), _jsx("option", { value: "STAFF", children: "Staff" }), _jsx("option", { value: "CUSTOMER", children: "Customer" })] }) }), _jsx("div", { children: _jsxs("select", { value: filterStatus, onChange: (e) => setFilterStatus(e.target.value), className: "w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 transition-all", style: {
                                     backgroundColor: THEME.colors.background.tertiary,
                                     color: THEME.colors.text.primary,
                                     borderWidth: "1px",
                                     borderColor: THEME.colors.border.DEFAULT,
-                                }, children: [_jsx("option", { value: "all", children: "All Status" }), _jsx("option", { value: "active", children: "Active" }), _jsx("option", { value: "inactive", children: "Inactive" }), _jsx("option", { value: "suspended", children: "Suspended" })] }) })] }) }), _jsx("div", { className: "rounded-2xl border overflow-hidden flex-1 flex flex-col", style: {
+                                }, children: [_jsx("option", { value: "all", children: "All Status" }), _jsx("option", { value: "ACTIVE", children: "Active" }), _jsx("option", { value: "INACTIVE", children: "Inactive" }), _jsx("option", { value: "SUSPENDED", children: "Suspended" })] }) })] }) }), _jsx("div", { className: "rounded-2xl border overflow-hidden flex-1 flex flex-col", style: {
                     backgroundColor: THEME.colors.background.secondary,
                     borderColor: THEME.colors.border.DEFAULT,
                 }, children: _jsx(UserTable, { users: filteredUsers, onEdit: handleEditUser, onDelete: handleDeleteUser }) }), _jsx(UserModal, { isOpen: isModalOpen, onClose: () => setIsModalOpen(false), onSave: handleSaveUser, user: selectedUser })] }));

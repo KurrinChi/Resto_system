@@ -39,7 +39,7 @@ export const UserModal = ({ isOpen, onClose, onSave, user, }) => {
                                 color: THEME.colors.text.primary,
                                 borderWidth: "1px",
                                 borderColor: THEME.colors.border.DEFAULT,
-                            }, required: true, children: [_jsx("option", { value: "customer", children: "Customer" }), _jsx("option", { value: "staff", children: "Staff" }), _jsx("option", { value: "manager", children: "Manager" }), _jsx("option", { value: "admin", children: "Admin" })] })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-sm font-medium mb-1", style: { color: THEME.colors.text.primary }, children: "Status" }), _jsxs("select", { value: formData.status, onChange: (e) => setFormData({ ...formData, status: e.target.value }), className: "w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 transition-all", style: {
+                            }, required: true, children: [_jsx("option", { value: "customer", children: "Customer" }), _jsx("option", { value: "staff", children: "Staff" }), _jsx("option", { value: "admin", children: "Admin" })] })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-sm font-medium mb-1", style: { color: THEME.colors.text.primary }, children: "Status" }), _jsxs("select", { value: formData.status, onChange: (e) => setFormData({ ...formData, status: e.target.value }), className: "w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 transition-all", style: {
                                 backgroundColor: THEME.colors.background.tertiary,
                                 color: THEME.colors.text.primary,
                                 borderWidth: "1px",

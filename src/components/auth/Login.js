@@ -35,7 +35,7 @@ export const Login = () => {
             return;
         }
         try {
-            const response = await fetch('http://localhost:8000/api/auth/login/', {
+            const response = await fetch('http://localhost:8000/api/admin/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -65,15 +65,18 @@ export const Login = () => {
                     sessionStorage.setItem('rs_current_user', JSON.stringify(sessionUser));
                     // Keep localStorage for legacy components that still read it (optional)
                     localStorage.setItem('rs_current_user', JSON.stringify(sessionUser));
+                    // Dispatch custom event to notify AdminContext
+                    window.dispatchEvent(new Event('rs_user_updated'));
                 }
                 catch (storageErr) {
                     console.warn('Failed to persist session user:', storageErr);
                 }
-                // Route based on role
-                if (sessionUser.role === 'ADMIN') {
+                // Route based on role (case-insensitive check)
+                const roleUpper = sessionUser.role.toUpperCase();
+                if (roleUpper === 'ADMIN') {
                     navigate('/admin');
                 }
-                else if (sessionUser.role === 'Customer') {
+                else if (roleUpper === 'CUSTOMER') {
                     navigate('/client');
                 }
                 else {
