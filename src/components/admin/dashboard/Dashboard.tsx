@@ -28,7 +28,7 @@ export const Dashboard: React.FC = () => {
       setLoading(true);
       const [statsResponse, ordersResponse, topItemsResponse] = await Promise.all([
         dashboardApi.getStats(),
-        ordersApi.getOrders(),
+        ordersApi.getAll(),
         reportsApi.getPopularItems({ limit: 5 })
       ]);
       

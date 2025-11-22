@@ -69,6 +69,64 @@ def get_next_menu_id():
         return "menu001"
 
 
+# ==================== AUTHENTICATION ====================
+
+@api_view(['POST'])
+def login_user(request):
+    """Login user with email and password"""
+    try:
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        if not email or not password:
+            return Response({
+                'success': False,
+                'error': 'Email and password are required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Find user by email
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Invalid email or password'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Verify password (hashed with SHA-256)
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        
+        if user.password_hash != password_hash:
+            return Response({
+                'success': False,
+                'error': 'Invalid email or password'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Check if user is active
+        if user.status != 'active':
+            return Response({
+                'success': False,
+                'error': 'Account is inactive. Please contact administrator.'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Return user data
+        return Response({
+            'success': True,
+            'id': user.id,
+            'name': user.fullName,
+            'email': user.email,
+            'role': user.role,
+            'phoneNumber': user.phoneNumber,
+            'avatar': user.avatar or ''
+        })
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 # ==================== DASHBOARD ====================
 
 @api_view(['GET'])
@@ -852,26 +910,37 @@ def settings(request):
 
 @api_view(['GET', 'PUT'])
 def profile(request):
-    """Get or update admin profile"""
+    """Get or update user profile (works for any role)"""
     try:
         if request.method == 'GET':
-            # Get first admin user
-            admin = User.objects.filter(role='admin').first()
+            # Get user ID and email from query params
+            user_id = request.GET.get('userId')
+            user_email = request.GET.get('email')
             
-            if admin:
+            # Try to find user by ID first, then email, then fallback to first admin
+            user = None
+            if user_id:
+                user = User.objects.filter(id=user_id).first()
+            if not user and user_email:
+                user = User.objects.filter(email=user_email).first()
+            if not user:
+                # Fallback to first admin for backward compatibility
+                user = User.objects.filter(role__iexact='admin').first()
+            
+            if user:
                 return Response({
                     'success': True,
                     'data': {
-                        'id': admin.id,
-                        'name': admin.fullName or admin.name or 'Admin User',
-                        'email': admin.email or 'admin@restaurant.com',
-                        'phone': admin.phoneNumber or admin.phone or '',
-                        'address': admin.address or '',
-                        'bio': admin.bio or '',
-                        'role': admin.role or 'ADMIN',
-                        'avatar': admin.avatar or '',
-                        'createdAt': admin.createdAt.isoformat() if admin.createdAt else '',
-                        'lastLogin': admin.lastLogin.isoformat() if admin.lastLogin else '',
+                        'id': user.id,
+                        'name': user.fullName or user.name or 'User',
+                        'email': user.email or '',
+                        'phone': user.phoneNumber or user.phone or '',
+                        'address': user.address or '',
+                        'bio': user.bio or '',
+                        'role': user.role or 'CUSTOMER',
+                        'avatar': user.avatar or '',
+                        'createdAt': user.createdAt.isoformat() if user.createdAt else '',
+                        'lastLogin': user.lastLogin.isoformat() if user.lastLogin else '',
                     }
                 })
             else:
@@ -894,29 +963,40 @@ def profile(request):
         
         elif request.method == 'PUT':
             data = request.data
-            admin = User.objects.filter(role='admin').first()
+            user_id = data.get('userId')
+            user_email = data.get('userEmail')
             
-            if admin:
+            # Try to find user by ID first, then email, then fallback to first admin
+            user = None
+            if user_id:
+                user = User.objects.filter(id=user_id).first()
+            if not user and user_email:
+                user = User.objects.filter(email=user_email).first()
+            if not user:
+                # Fallback to first admin for backward compatibility
+                user = User.objects.filter(role__iexact='admin').first()
+            
+            if user:
                 if 'name' in data:
-                    admin.fullName = data['name']
-                    admin.name = data['name']
+                    user.fullName = data['name']
+                    user.name = data['name']
                 if 'email' in data:
-                    admin.email = data['email']
+                    user.email = data['email']
                 if 'phone' in data:
-                    admin.phoneNumber = data['phone']
-                    admin.phone = data['phone']
+                    user.phoneNumber = data['phone']
+                    user.phone = data['phone']
                 if 'address' in data:
-                    admin.address = data['address']
+                    user.address = data['address']
                 if 'bio' in data:
-                    admin.bio = data['bio']
+                    user.bio = data['bio']
                 if 'avatar' in data:
-                    admin.avatar = data['avatar']
+                    user.avatar = data['avatar']
                 
-                admin.save()
+                user.save()
                 
                 return Response({'success': True, 'message': 'Profile updated successfully'})
             else:
-                return Response({'success': False, 'error': 'Admin user not found'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'success': False, 'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
     
     except Exception as e:
         return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -924,28 +1004,38 @@ def profile(request):
 
 @api_view(['POST'])
 def change_password(request):
-    """Change admin password"""
+    """Change user password (works for any role)"""
     try:
         data = request.data
         current_password = data.get('current_password')
         new_password = data.get('new_password')
+        user_id = data.get('userId')
+        user_email = data.get('userEmail')
         
-        admin = User.objects.filter(role='admin').first()
+        # Try to find user by ID first, then email, then fallback to first admin
+        user = None
+        if user_id:
+            user = User.objects.filter(id=user_id).first()
+        if not user and user_email:
+            user = User.objects.filter(email=user_email).first()
+        if not user:
+            # Fallback to first admin for backward compatibility
+            user = User.objects.filter(role__iexact='admin').first()
         
-        if admin:
+        if user:
             # Verify current password
             current_hash = hashlib.sha256(current_password.encode()).hexdigest()
             
-            if admin.password_hash == current_hash or not admin.password_hash:
+            if user.password_hash == current_hash or not user.password_hash:
                 # Update password
-                admin.password_hash = hashlib.sha256(new_password.encode()).hexdigest()
-                admin.save()
+                user.password_hash = hashlib.sha256(new_password.encode()).hexdigest()
+                user.save()
                 
                 return Response({'success': True, 'message': 'Password changed successfully'})
             else:
                 return Response({'success': False, 'error': 'Current password is incorrect'}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response({'success': False, 'error': 'Admin user not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'success': False, 'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
     
     except Exception as e:
         return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

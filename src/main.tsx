@@ -1,5 +1,5 @@
 // frontend/src/main.tsx
-// Force rebuild - timestamp: 2025-11-22
+// Force rebuild - timestamp: 2025-11-22 06:00
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';

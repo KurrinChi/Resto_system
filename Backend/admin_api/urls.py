@@ -5,6 +5,9 @@ from django.urls import path
 from admin_api import views
 
 urlpatterns = [
+    # Authentication
+    path('auth/login', views.login_user, name='login_user'),
+    
     # Dashboard
     path('dashboard/stats', views.dashboard_stats, name='dashboard_stats'),
     path('dashboard/charts', views.dashboard_charts, name='dashboard_charts'),

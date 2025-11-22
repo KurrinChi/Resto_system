@@ -38,13 +38,17 @@ export const UserTable: React.FC<UserTableProps> = ({
   const getRoleBadgeVariant = (
     role: string
   ): "info" | "success" | "warning" | "default" => {
-    switch (role) {
-      case "admin":
+    const roleUpper = role.toUpperCase();
+    switch (roleUpper) {
+      case "ADMIN":
         return "info";
-      case "manager":
-        return "success";
-      case "staff":
+      case "STAFF":
+      case "CHEF":
+      case "CASHIER":
+      case "WAITER":
         return "warning";
+      case "CUSTOMER":
+        return "success";
       default:
         return "default";
     }
