@@ -1,19 +1,19 @@
 import React, { useState } from "react";
-import { MapPin, ChevronLeft, ChevronRight } from "lucide-react";
+import { RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "../../common/Badge";
 import { THEME } from "../../../constants/theme";
 import type { CustomerTracking } from "../../../types";
 
 interface TrackingTableProps {
   trackingData: CustomerTracking[];
-  onViewLocation: (tracking: CustomerTracking) => void;
+  onUpdateStatus: (tracking: CustomerTracking) => void;
 }
 
 const ITEMS_PER_PAGE = 10;
 
 export const TrackingTable: React.FC<TrackingTableProps> = ({
   trackingData,
-  onViewLocation,
+  onUpdateStatus,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -108,7 +108,7 @@ export const TrackingTable: React.FC<TrackingTableProps> = ({
                 Est. Delivery
               </th>
               <th
-                className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider"
                 style={{ color: THEME.colors.text.secondary }}
               >
                 Actions
@@ -176,33 +176,22 @@ export const TrackingTable: React.FC<TrackingTableProps> = ({
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                  <button
-                    onClick={() => onViewLocation(tracking)}
-                    disabled={!tracking.location}
-                    className="p-2 rounded-lg transition-all border inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  <select
+                    value={tracking.status}
+                    onChange={(e) => onUpdateStatus({...tracking, status: e.target.value})}
+                    className="px-3 py-1.5 rounded-lg text-sm border transition-all focus:outline-none focus:ring-2"
                     style={{
-                      color: THEME.colors.text.secondary,
-                      backgroundColor: "transparent",
+                      backgroundColor: THEME.colors.background.tertiary,
+                      color: THEME.colors.text.primary,
                       borderColor: THEME.colors.border.DEFAULT,
                     }}
-                    onMouseEnter={(e) => {
-                      if (tracking.location) {
-                        e.currentTarget.style.backgroundColor =
-                          "rgba(59, 130, 246, 0.1)";
-                        e.currentTarget.style.color = "#3b82f6";
-                        e.currentTarget.style.borderColor = "#3b82f6";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "transparent";
-                      e.currentTarget.style.color = THEME.colors.text.secondary;
-                      e.currentTarget.style.borderColor =
-                        THEME.colors.border.DEFAULT;
-                    }}
                   >
-                    <MapPin className="w-4 h-4" />
-                    <span className="text-sm">View Location</span>
-                  </button>
+                    <option value="received">Received</option>
+                    <option value="preparing">Preparing</option>
+                    <option value="ready">Ready</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="completed">Completed</option>
+                  </select>
                 </td>
               </tr>
             ))}
