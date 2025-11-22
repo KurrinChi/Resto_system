@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, ArrowRight, Heart, ChevronLeft, ChevronRight, ShoppingCart, Search } from 'lucide-react';
+import { MapPin, ArrowRight, ChevronLeft, ChevronRight, ShoppingCart, Search } from 'lucide-react';
 // Load local image from src/assets in a Vite-safe way
 const MAPS_IMG = new URL('../../assets/mapsimg.png', import.meta.url).href;
 const PLACEHOLDER_IMG = new URL('../../assets/placeholder.png', import.meta.url).href;
@@ -230,7 +230,6 @@ const recommendedData = [
 ];
 
 export const Home: React.FC = () => {
-  const [favorites, setFavorites] = React.useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = React.useState('');
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
   const promotionScrollRef = React.useRef<HTMLDivElement>(null);
@@ -312,17 +311,7 @@ export const Home: React.FC = () => {
     return () => window.removeEventListener('addressUpdated', handleAddressUpdate);
   }, []);
 
-  const toggleFavorite = (itemId: number) => {
-    setFavorites(prev => {
-      const newFavorites = new Set(prev);
-      if (newFavorites.has(itemId)) {
-        newFavorites.delete(itemId);
-      } else {
-        newFavorites.add(itemId);
-      }
-      return newFavorites;
-    });
-  };
+  
 
   const handleAddToCart = (item: { id: number | string; name: string; price: number }) => {
     addItem(item);
@@ -538,20 +527,7 @@ export const Home: React.FC = () => {
                     target.src = PLACEHOLDER_IMG;
                   }}
                 />
-                <button
-                  onClick={() => toggleFavorite(item.id)}
-                  className="absolute top-2 right-2 p-2 rounded-full transition-all"
-                  style={{ 
-                    backgroundColor: 'rgba(255,255,255,0.9)',
-                    border: favorites.has(item.id) ? '2px solid #ef4444' : '2px solid transparent'
-                  }}
-                >
-                  <Heart 
-                    className="w-5 h-5 transition-colors" 
-                    style={{ color: favorites.has(item.id) ? '#ef4444' : '#9ca3af' }}
-                    fill={favorites.has(item.id) ? '#ef4444' : 'none'}
-                  />
-                </button>
+                
               </div>
               <div className="p-4">
                 <h3 className="text-base font-semibold mb-1" style={{ color: THEME.colors.text.primary }}>{item.name}</h3>
@@ -618,20 +594,7 @@ export const Home: React.FC = () => {
                     target.src = PLACEHOLDER_IMG;
                   }}
                 />
-                <button
-                  onClick={() => toggleFavorite(item.id)}
-                  className="absolute top-2 right-2 p-2 rounded-full transition-all"
-                  style={{ 
-                    backgroundColor: 'rgba(255,255,255,0.9)',
-                    border: favorites.has(item.id) ? '2px solid #ef4444' : '2px solid transparent'
-                  }}
-                >
-                  <Heart 
-                    className="w-5 h-5 transition-colors" 
-                    style={{ color: favorites.has(item.id) ? '#ef4444' : '#9ca3af' }}
-                    fill={favorites.has(item.id) ? '#ef4444' : 'none'}
-                  />
-                </button>
+                
                 <div className="absolute bottom-2 left-2 flex gap-1 flex-wrap">
                   {item.tags.map((tag, idx) => (
                     <span 

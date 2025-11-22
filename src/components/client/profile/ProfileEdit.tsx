@@ -2,7 +2,7 @@ import React from 'react';
 import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
 import { Button } from '../../common/Button';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Phone, CreditCard, Calendar, User, Save, Upload } from 'lucide-react';
+import { MapPin, Phone, User, Save, Upload } from 'lucide-react';
 import { Toast } from '../../common/Toast';
 
 export const ProfileEdit: React.FC = () => {
@@ -15,50 +15,55 @@ export const ProfileEdit: React.FC = () => {
   const [email, setEmail] = React.useState('');
   const [avatar, setAvatar] = React.useState('');
   const [contactNumber, setContactNumber] = React.useState('');
-  const [paymentMethod, setPaymentMethod] = React.useState('cod');
-  const [gender, setGender] = React.useState('');
-  const [birthday, setBirthday] = React.useState('');
+  // Removed paymentMethod and gender (deprecated fields)
   
   // Validation error states
   const [emailError, setEmailError] = React.useState('');
   const [phoneError, setPhoneError] = React.useState('');
-  const [birthdayError, setBirthdayError] = React.useState('');
   
   // Load user data
   const [user, setUser] = React.useState<any>(null);
+  // Address tracking
+  const [originalAddress, setOriginalAddress] = React.useState('');
+  const [newAddress, setNewAddress] = React.useState('');
 
   React.useEffect(() => {
     try {
-      const raw = localStorage.getItem('rs_current_user');
-      let userData = raw ? JSON.parse(raw) : null;
+      const rawSession = sessionStorage.getItem('rs_current_user');
+      const rawLocal = !rawSession ? localStorage.getItem('rs_current_user') : null;
+      const userData = rawSession ? JSON.parse(rawSession) : (rawLocal ? JSON.parse(rawLocal) : null);
       
-      // If no user found, use demo user data
       if (!userData) {
-        userData = {
-          id: 'demo-user',
-          name: 'John Doe',
-          email: 'john.doe@example.com',
-          avatar: '',
-          contactNumber: '+63 912 345 6789',
-          paymentMethod: 'gcash',
-          gender: 'male',
-          birthday: '1990-05-15',
-          address: localStorage.getItem('userAddress') || 'Manila, Philippines'
-        };
+        navigate('/login');
+        return;
       }
       
       setUser(userData);
-      setName(userData.name || '');
+      setName(userData.name || userData.fullName || '');
       setEmail(userData.email || '');
       setAvatar(userData.avatar || '');
-      setContactNumber(userData.contactNumber || '');
-      setPaymentMethod(userData.paymentMethod || 'cod');
-      setGender(userData.gender || '');
-      setBirthday(userData.birthday || '');
+      setContactNumber(userData.contactNumber || userData.phoneNumber || userData.phone || '');
+      setOriginalAddress(userData.address || '');
+      const storedAddress = localStorage.getItem('userAddress');
+      if (storedAddress && storedAddress !== (userData.address || '')) {
+        setNewAddress(storedAddress);
+      }
     } catch {
-      // Fallback
+      navigate('/login');
     }
-  }, []);
+  }, [navigate]);
+
+  // Listen for external address updates (map modal)
+  React.useEffect(() => {
+    const handleAddressUpdate = () => {
+      const storedAddress = localStorage.getItem('userAddress') || '';
+      if (storedAddress && storedAddress !== originalAddress) {
+        setNewAddress(storedAddress);
+      }
+    };
+    window.addEventListener('addressUpdated', handleAddressUpdate);
+    return () => window.removeEventListener('addressUpdated', handleAddressUpdate);
+  }, [originalAddress]);
 
   const handleOpenMapModal = () => {
     window.dispatchEvent(new Event('openMapModal'));
@@ -66,17 +71,22 @@ export const ProfileEdit: React.FC = () => {
 
   const handleUpload = (file?: File) => {
     if (!file) return;
+    const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2MB limit
+    if (file.size > MAX_SIZE_BYTES) {
+      setToastVariant('error');
+      setToastMessage('Image too large. Maximum size is 2MB.');
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => setAvatar(String(reader.result));
     reader.readAsDataURL(file);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     try {
       // Clear previous errors
       setEmailError('');
       setPhoneError('');
-      setBirthdayError('');
 
       let hasError = false;
 
@@ -87,30 +97,15 @@ export const ProfileEdit: React.FC = () => {
         hasError = true;
       }
 
-      // Validate phone number (must start with +63 9 and have 7 digits after, ignoring spaces)
-      const cleanedPhone = contactNumber.replace(/\s/g, ''); // Remove all spaces
-      const phoneRegex = /^\+639\d{7}$/;
+      // Validate phone number: must be 11 digits starting with 09 (e.g., 09XXXXXXXXX)
+      const cleanedPhone = contactNumber.replace(/\D/g, ''); // Keep digits only
+      const phoneRegex = /^09\d{9}$/; // 09 + 9 more digits = 11 total
       if (!phoneRegex.test(cleanedPhone)) {
-        setPhoneError('Please enter valid contact number');
+        setPhoneError('Contact number must start with 09 and be 11 digits');
         hasError = true;
       }
 
       // Validate age (must be 16 or above)
-      if (birthday) {
-        const birthDate = new Date(birthday);
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-          age--;
-        }
-
-        if (age < 16) {
-          setBirthdayError('Please enter valid birthday (must be 16 years or older)');
-          hasError = true;
-        }
-      }
 
       // If any validation failed, show toast and return
       if (hasError) {
@@ -119,37 +114,62 @@ export const ProfileEdit: React.FC = () => {
         return;
       }
 
-      const updatedUser = {
-        ...user,
-        name,
-        email,
-        avatar,
-        contactNumber,
-        paymentMethod,
-        gender,
-        birthday,
-        address: localStorage.getItem('userAddress') || user?.address
-      };
+      const currentAddress = newAddress || originalAddress || '';
 
-      // Save to localStorage
-      localStorage.setItem('rs_current_user', JSON.stringify(updatedUser));
-      
-      // Also update in users array if exists
-      const usersRaw = localStorage.getItem('rs_users_v1');
-      if (usersRaw) {
-        const users = JSON.parse(usersRaw);
-        const idx = users.findIndex((u: any) => u.id === user?.id);
-        if (idx !== -1) {
-          users[idx] = updatedUser;
-          localStorage.setItem('rs_users_v1', JSON.stringify(users));
+      // Update backend
+      try {
+        const response = await fetch('http://localhost:8000/api/auth/update-profile/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            name,
+            email,
+            avatar,
+            contactNumber: cleanedPhone,
+            address: currentAddress
+          })
+        });
+        const contentType = response.headers.get('Content-Type') || '';
+        if (!response.ok) {
+          if (contentType.includes('application/json')) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to update profile');
+          } else {
+            const text = await response.text();
+            throw new Error(text.slice(0,200) || 'Failed to update profile');
+          }
         }
-      }
 
-      setToastVariant('success');
-      setToastMessage('Profile Updated Successfully');
-      setTimeout(() => {
-        navigate('/client/profile');
-      }, 1500);
+        const result = contentType.includes('application/json') ? await response.json() : {};
+
+        // Update local session storage
+        const updatedUser = {
+          ...user,
+            name,
+            fullName: name,
+            email,
+            avatar,
+            contactNumber: cleanedPhone,
+            phoneNumber: cleanedPhone,
+            address: currentAddress
+        };
+
+        sessionStorage.setItem('rs_current_user', JSON.stringify(updatedUser));
+        localStorage.setItem('rs_current_user', JSON.stringify(updatedUser));
+
+        setToastVariant('success');
+        setToastMessage('Profile Updated Successfully');
+        setOriginalAddress(currentAddress);
+        setNewAddress('');
+        setTimeout(() => {
+          navigate('/client/profile');
+        }, 1500);
+      } catch (err: any) {
+        console.error('Update profile error:', err);
+        setToastVariant('error');
+        setToastMessage(err.message || 'Failed to update profile');
+      }
     } catch {
       setToastVariant('error');
       setToastMessage('Failed to save profile');
@@ -164,7 +184,7 @@ export const ProfileEdit: React.FC = () => {
     return <div style={{ color: THEME.colors.text.tertiary }}>Loading...</div>;
   }
 
-  const address = localStorage.getItem('userAddress') || user.address || 'No address set';
+  const displayAddress = originalAddress || 'No address set';
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -282,9 +302,14 @@ export const ProfileEdit: React.FC = () => {
               <h4 className="text-sm font-semibold mb-2" style={{ color: THEME.colors.text.secondary }}>
                 Address
               </h4>
-              <p className="text-sm break-words mb-3" style={{ color: THEME.colors.text.primary }}>
-                {address}
+              <p className="text-sm break-words mb-1" style={{ color: THEME.colors.text.primary }}>
+                {displayAddress}
               </p>
+              {newAddress && newAddress !== originalAddress && (
+                <p className="text-xs break-words mb-3" style={{ color: THEME.colors.primary.DEFAULT }}>
+                  NEW: {newAddress}
+                </p>
+              )}
               <Button 
                 variant="secondary"
                 onClick={handleOpenMapModal}
@@ -322,12 +347,13 @@ export const ProfileEdit: React.FC = () => {
                 type="tel"
                 value={contactNumber}
                 onChange={(e) => {
-                  // Remove all letters (A-Z, a-z) from input
-                  const cleaned = e.target.value.replace(/[A-Za-z]/g, '');
-                  setContactNumber(cleaned);
-                  setPhoneError(''); // Clear error on change
+                  // Keep only digits, limit to 11
+                  let digits = e.target.value.replace(/\D/g, '');
+                  if (digits.length > 11) digits = digits.slice(0, 11);
+                  setContactNumber(digits);
+                  setPhoneError('');
                 }}
-                placeholder="+63 9XX XXX XXXX"
+                placeholder="09XXXXXXXXX"
                 className="w-full px-3 py-2 rounded-lg border outline-none focus:ring-2"
                 style={{
                   backgroundColor: phoneError ? '#fee2e2' : THEME.colors.background.tertiary,
@@ -345,117 +371,9 @@ export const ProfileEdit: React.FC = () => {
           </div>
         </div>
 
-        {/* Payment Method */}
-        <div 
-          className="rounded-lg p-5"
-          style={{ backgroundColor: THEME.colors.background.secondary, border: `1px solid ${THEME.colors.border.DEFAULT}` }}
-        >
-          <div className="flex items-start gap-3">
-            <div 
-              className="p-2 rounded-lg flex-shrink-0"
-              style={{ backgroundColor: THEME.colors.primary.DEFAULT + '20' }}
-            >
-              <CreditCard className="w-5 h-5" style={{ color: THEME.colors.primary.DEFAULT }} />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold mb-2" style={{ color: THEME.colors.text.secondary }}>
-                Saved Payment Method
-              </h4>
-              <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border outline-none focus:ring-2"
-                style={{
-                  backgroundColor: THEME.colors.background.tertiary,
-                  borderColor: THEME.colors.border.DEFAULT,
-                  color: THEME.colors.text.primary,
-                  '--tw-ring-color': THEME.colors.primary.DEFAULT
-                } as React.CSSProperties}
-              >
-                <option value="cod">Cash on Delivery</option>
-                <option value="gcash">GCash</option>
-                <option value="paymaya">PayMaya</option>
-              </select>
-            </div>
-          </div>
-        </div>
+        {/* Deprecated sections (Payment Method, Gender) removed */}
 
-        {/* Gender */}
-        <div 
-          className="rounded-lg p-5"
-          style={{ backgroundColor: THEME.colors.background.secondary, border: `1px solid ${THEME.colors.border.DEFAULT}` }}
-        >
-          <div className="flex items-start gap-3">
-            <div 
-              className="p-2 rounded-lg flex-shrink-0"
-              style={{ backgroundColor: THEME.colors.primary.DEFAULT + '20' }}
-            >
-              <User className="w-5 h-5" style={{ color: THEME.colors.primary.DEFAULT }} />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold mb-2" style={{ color: THEME.colors.text.secondary }}>
-                Gender
-              </h4>
-              <select
-                value={gender}
-                onChange={(e) => setGender(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border outline-none focus:ring-2"
-                style={{
-                  backgroundColor: THEME.colors.background.tertiary,
-                  borderColor: THEME.colors.border.DEFAULT,
-                  color: THEME.colors.text.primary,
-                  '--tw-ring-color': THEME.colors.primary.DEFAULT
-                } as React.CSSProperties}
-              >
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-                <option value="prefer_not_to_say">Prefer not to say</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Birthday */}
-        <div 
-          className="rounded-lg p-5 md:col-span-2"
-          style={{ backgroundColor: THEME.colors.background.secondary, border: `1px solid ${THEME.colors.border.DEFAULT}` }}
-        >
-          <div className="flex items-start gap-3">
-            <div 
-              className="p-2 rounded-lg flex-shrink-0"
-              style={{ backgroundColor: THEME.colors.primary.DEFAULT + '20' }}
-            >
-              <Calendar className="w-5 h-5" style={{ color: THEME.colors.primary.DEFAULT }} />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold mb-2" style={{ color: THEME.colors.text.secondary }}>
-                Birthday
-              </h4>
-              <input
-                type="date"
-                value={birthday}
-                onChange={(e) => {
-                  setBirthday(e.target.value);
-                  setBirthdayError(''); // Clear error on change
-                }}
-                className="w-full px-3 py-2 rounded-lg border outline-none focus:ring-2"
-                style={{
-                  backgroundColor: birthdayError ? '#fee2e2' : THEME.colors.background.tertiary,
-                  borderColor: birthdayError ? '#ef4444' : THEME.colors.border.DEFAULT,
-                  color: THEME.colors.text.primary,
-                  '--tw-ring-color': THEME.colors.primary.DEFAULT
-                } as React.CSSProperties}
-              />
-              {birthdayError && (
-                <p className="text-sm mt-1" style={{ color: '#ef4444' }}>
-                  {birthdayError}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+        {/* Birthday removed (no birthday column) */}
       </div>
 
       {/* Save/Cancel Buttons at Bottom */}

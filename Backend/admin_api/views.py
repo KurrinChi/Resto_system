@@ -5,6 +5,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from datetime import datetime, timedelta
+from django.utils import timezone
 from admin_api.models import User, MenuItem, Order, Category, Setting
 from django.db.models import Q, Sum, Count
 import hashlib
@@ -80,25 +81,26 @@ def dashboard_stats(request):
         total_revenue = orders.aggregate(Sum('totalFee'))['totalFee__sum'] or 0
         
         # Orders by status
-        pending_orders = orders.filter(orderStatus='received').count()
+        pending_orders = orders.filter(orderStatus='pending').count()
         preparing_orders = orders.filter(orderStatus='preparing').count()
         ready_orders = orders.filter(orderStatus='ready').count()
-        completed_orders = orders.filter(Q(orderStatus='delivered') | Q(orderStatus='completed')).count()
+        completed_orders = orders.filter(orderStatus='completed').count()
         
         # Today's stats
         today = datetime.now().date()
-        today_key = str(today)
+        today_key = today.strftime('%Y%m%d')  # Format as YYYYMMDD
         today_orders = orders.filter(dayKey=today_key)
         today_revenue = today_orders.aggregate(Sum('totalFee'))['totalFee__sum'] or 0
         
-        # Staff count
-        staff_count = User.objects.filter(role__in=['CHEF', 'CASHIER', 'WAITER', 'SECURITY_GUARD']).count()
+        # Total users
+        total_users = User.objects.count()
         
         # Calculate average order value
         avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
         
-        # Active customers
-        active_customers = User.objects.count()
+        # Active customers and staff
+        active_customers = User.objects.filter(role='customer', status='active').count()
+        total_staff = User.objects.filter(role='staff').count()
         
         return Response({
             'success': True,
@@ -112,8 +114,8 @@ def dashboard_stats(request):
                 'today_orders': today_orders.count(),
                 'today_revenue': float(today_revenue),
                 'total_menu_items': MenuItem.objects.count(),
-                'total_staff': staff_count,
-                'total_users': User.objects.count(),
+                'total_staff': total_staff,
+                'total_users': total_users,
                 'active_customers': active_customers,
                 'avg_order_value': round(avg_order_value, 2),
             }
@@ -130,28 +132,30 @@ def dashboard_charts(request):
     """Get data for dashboard charts"""
     try:
         # Revenue by day (last 7 days)
-        revenue_by_day = defaultdict(float)
-        orders_by_day = defaultdict(int)
+        revenue_by_day = []
+        orders_by_day = []
         
-        for i in range(7):
+        for i in range(6, -1, -1):  # Last 7 days, reversed
             date = (datetime.now().date() - timedelta(days=i))
-            revenue_by_day[str(date)] = 0
-            orders_by_day[str(date)] = 0
-        
-        # Get orders from last 7 days
-        recent_orders = Order.objects.filter(
-            dayKey__in=revenue_by_day.keys()
-        )
-        
-        for order in recent_orders:
-            revenue_by_day[order.dayKey] += float(order.totalFee)
-            orders_by_day[order.dayKey] += 1
+            day_key = date.strftime('%Y%m%d')  # Format as YYYYMMDD
+            
+            day_orders = Order.objects.filter(dayKey=day_key)
+            revenue = day_orders.aggregate(Sum('totalFee'))['totalFee__sum'] or 0
+            
+            revenue_by_day.append({
+                'date': date.strftime('%Y-%m-%d'),
+                'revenue': float(revenue)
+            })
+            orders_by_day.append({
+                'date': date.strftime('%Y-%m-%d'),
+                'count': day_orders.count()
+            })
         
         return Response({
             'success': True,
             'data': {
-                'revenue_by_day': dict(revenue_by_day),
-                'orders_by_day': dict(orders_by_day),
+                'revenue_by_day': revenue_by_day,
+                'orders_by_day': orders_by_day,
             }
         })
     except Exception as e:
@@ -181,6 +185,15 @@ def list_users(request):
         # Convert to dict
         users_data = []
         for user in users:
+            # Convert UTC to local timezone for display
+            created_at = user.createdAt
+            if created_at and timezone.is_aware(created_at):
+                created_at = timezone.localtime(created_at)
+            
+            last_login = user.lastLogin
+            if last_login and timezone.is_aware(last_login):
+                last_login = timezone.localtime(last_login)
+            
             users_data.append({
                 'id': user.id,
                 'fullName': user.fullName,
@@ -193,9 +206,9 @@ def list_users(request):
                 'role': user.role,
                 'status': user.status,
                 'avatar': user.avatar,
-                'createdAt': user.createdAt.isoformat() if user.createdAt else None,
-                'created_at': user.created_at.isoformat() if user.created_at else None,
-                'lastLogin': user.lastLogin.isoformat() if user.lastLogin else None,
+                'createdAt': created_at.isoformat() if created_at else None,
+                'created_at': created_at.isoformat() if created_at else None,
+                'lastLogin': last_login.isoformat() if last_login else None,
             })
         
         return Response({
@@ -263,6 +276,11 @@ def user_detail(request, user_id):
         user = User.objects.get(id=user_id)
         
         if request.method == 'GET':
+            # Convert UTC to local timezone for display
+            created_at = user.createdAt
+            if created_at and timezone.is_aware(created_at):
+                created_at = timezone.localtime(created_at)
+            
             return Response({
                 'success': True,
                 'data': {
@@ -277,7 +295,7 @@ def user_detail(request, user_id):
                     'role': user.role,
                     'status': user.status,
                     'avatar': user.avatar,
-                    'createdAt': user.createdAt.isoformat() if user.createdAt else None,
+                    'createdAt': created_at.isoformat() if created_at else None,
                 }
             })
         
@@ -721,19 +739,27 @@ def popular_items_report(request):
     try:
         # Count items from orders
         item_counts = defaultdict(int)
+        item_revenue = defaultdict(float)
         orders = Order.objects.all()
         
         for order in orders:
-            for item in order.orderList:
-                item_name = item.get('menuName', item.get('name', 'Unknown'))
-                item_counts[item_name] += item.get('quantity', 1)
+            if isinstance(order.orderList, list):
+                for item in order.orderList:
+                    item_name = item.get('name', 'Unknown')
+                    quantity = item.get('quantity', 1)
+                    item_counts[item_name] += quantity
+                    item_revenue[item_name] += float(item.get('total', 0))
         
-        # Sort and get top 10
+        # Sort by count and get top 10
         popular = sorted(item_counts.items(), key=lambda x: x[1], reverse=True)[:10]
         
         return Response({
             'success': True,
-            'data': [{'name': name, 'count': count} for name, count in popular]
+            'data': [{
+                'name': name,
+                'count': count,
+                'revenue': float(item_revenue[name])
+            } for name, count in popular]
         })
     except Exception as e:
         return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -747,9 +773,9 @@ def revenue_trend(request):
         trend = []
         for i in range(30):
             date = (datetime.now().date() - timedelta(days=i))
-            day_key = str(date)
+            day_key = date.strftime('%Y%m%d')  # Format as YYYYMMDD
             revenue = Order.objects.filter(dayKey=day_key).aggregate(Sum('totalFee'))['totalFee__sum'] or 0
-            trend.append({'date': day_key, 'revenue': float(revenue)})
+            trend.append({'date': date.strftime('%Y-%m-%d'), 'revenue': float(revenue)})
         
         trend.reverse()
         
@@ -763,16 +789,39 @@ def category_sales(request):
     """Get sales by category"""
     try:
         category_totals = defaultdict(float)
+        category_orders = defaultdict(int)
         orders = Order.objects.all()
         
-        for order in orders:
-            for item in order.orderList:
-                category = item.get('category', 'Other')
-                price = float(item.get('price', 0))
-                quantity = item.get('quantity', 1)
-                category_totals[category] += price * quantity
+        # Get menu items to map categories
+        menu_items_dict = {item.id: item for item in MenuItem.objects.all()}
         
-        data = [{'category': cat, 'total': total} for cat, total in category_totals.items()]
+        for order in orders:
+            if isinstance(order.orderList, list):
+                for item in order.orderList:
+                    item_id = item.get('id', '')
+                    menu_item = menu_items_dict.get(item_id)
+                    
+                    if menu_item:
+                        # Get category from menu item
+                        category_obj = Category.objects.filter(id=menu_item.category).first()
+                        category_name = category_obj.name if category_obj else 'Other'
+                    else:
+                        category_name = 'Other'
+                    
+                    price = float(item.get('price', 0))
+                    quantity = item.get('quantity', 1)
+                    category_totals[category_name] += price * quantity
+                    category_orders[category_name] += 1
+        
+        data = [
+            {
+                'category': cat,
+                'revenue': float(total),
+                'orders': category_orders[cat],
+                'growth': 0  # Placeholder for growth calculation
+            } 
+            for cat, total in category_totals.items()
+        ]
         
         return Response({'success': True, 'data': data})
     except Exception as e:
@@ -807,7 +856,7 @@ def profile(request):
     try:
         if request.method == 'GET':
             # Get first admin user
-            admin = User.objects.filter(role='ADMIN').first()
+            admin = User.objects.filter(role='admin').first()
             
             if admin:
                 return Response({
@@ -845,7 +894,7 @@ def profile(request):
         
         elif request.method == 'PUT':
             data = request.data
-            admin = User.objects.filter(role='ADMIN').first()
+            admin = User.objects.filter(role='admin').first()
             
             if admin:
                 if 'name' in data:
@@ -881,7 +930,7 @@ def change_password(request):
         current_password = data.get('current_password')
         new_password = data.get('new_password')
         
-        admin = User.objects.filter(role='ADMIN').first()
+        admin = User.objects.filter(role='admin').first()
         
         if admin:
             # Verify current password

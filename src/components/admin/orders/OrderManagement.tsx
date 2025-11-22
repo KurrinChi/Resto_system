@@ -8,8 +8,10 @@ import { OrderModal } from "./OrderModal";
 import { THEME } from "../../../constants/theme";
 import type { Order } from "../../../types";
 import { ordersApi } from "../../../services/apiservice";
+import { exportToCSV } from "../../../utils/exportUtils";
 
 export const OrderManagement: React.FC = () => {
+  // Order Management - Nov 22 Updated
   const [orders, setOrders] = useState<Order[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,26 +31,28 @@ export const OrderManagement: React.FC = () => {
       setLoading(true);
       const response = await ordersApi.getAll();
       if (response.success) {
-        // Transform Firebase data to match Order interface
+        console.log('✅ API SUCCESS - Orders fetched:', response.data.length);
+        console.log('✅ First order data:', response.data[0]);
         const ordersData = response.data.map((order: any) => ({
           id: order.id,
           orderNumber: order.id || `ORD-${order.id.slice(0, 8)}`,
-          customerId: order.userId || order.guestInfo?.email || '',
-          customerName: order.customerName || order.guestInfo?.name || order.userId || 'Guest',
-          items: order.orderList?.map((item: any) => ({
-            menuItemId: item.menuId,
-            name: item.menuName,
-            quantity: item.quantity || 1,
-            price: item.price || item.unitPrice || 0,
+          customerId: order.userId || order.id,
+          customerName: order.fullName || 'Guest',
+          items: (order.orderList || []).map((item: any) => ({
+            menuItemId: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
             specialInstructions: item.notes
-          })) || [],
+          })),
           status: order.orderStatus || 'pending',
           total: order.totalFee || 0,
           paymentStatus: order.paymentMethod === 'cod' ? 'pending' : 'paid',
           orderDate: order.createdAt || order.dayKey,
-          deliveryAddress: order.deliveryAddress?.fullAddress || (order.tableNumber ? `Table ${order.tableNumber}` : ''),
+          deliveryAddress: order.address || '',
           notes: order.orderList?.[0]?.notes || ''
         }));
+        console.log('✅ Transformed Order:', ordersData[0]);
         setOrders(ordersData);
       }
     } catch (err: any) {
@@ -123,8 +127,22 @@ export const OrderManagement: React.FC = () => {
   };
 
   const handleExportOrders = () => {
-    console.log("Exporting orders...");
-    alert("Orders exported successfully!");
+    if (filteredOrders.length === 0) {
+      alert('No orders to export');
+      return;
+    }
+
+    const exportData = filteredOrders.map(order => ({
+      'Order ID': order.id,
+      'Customer Name': order.customerName,
+      'Total Amount': `$${order.total.toFixed(2)}`,
+      'Status': order.status,
+      'Payment': order.paymentStatus,
+      'Date': new Date(order.orderDate).toLocaleDateString(),
+      'Items': order.items?.length || 0
+    }));
+
+    exportToCSV(exportData, 'orders');
   };
 
   const filteredOrders = orders.filter((order) => {

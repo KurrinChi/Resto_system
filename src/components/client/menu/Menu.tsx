@@ -31,7 +31,6 @@ export const Menu: React.FC = () => {
   const [orderType, setOrderType] = React.useState<'delivery' | 'pickup'>('delivery');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
-  const [favorites, setFavorites] = React.useState<Set<number>>(new Set());
 
   // Add keyframe animations on mount
   React.useEffect(() => {
@@ -132,20 +131,7 @@ export const Menu: React.FC = () => {
     removeItem(id);
   };
 
-  const handleToggleFavorite = (itemId: number | string) => {
-    const id = typeof itemId === 'string' ? parseInt(itemId) : itemId;
-    setFavorites(prev => {
-      const newFavorites = new Set(prev);
-      if (newFavorites.has(id)) {
-        newFavorites.delete(id);
-        setToastMessage('Removed from Favorites');
-      } else {
-        newFavorites.add(id);
-        setToastMessage('Added to Favorites');
-      }
-      return newFavorites;
-    });
-  };
+  
 
   const handlePlaceOrder = () => {
     if (items.length === 0) {

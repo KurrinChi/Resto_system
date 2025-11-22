@@ -4,9 +4,10 @@ import { AdminLayout } from "./components/admin/layout/AdminLayout";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { initializeTheme } from "./constants/theme";
 // Client routes
-import { ClientLayout, Home as ClientHome, CartProvider, Menu, CartPage, Checkout, Login, Register, OrderHistory, OrderTracking, ProfileEdit, ProfilePage, Favorites } from "./components/client";
+import { ClientLayout, Home as ClientHome, CartProvider, Menu, CartPage, Checkout, OrderHistory, OrderTracking, ProfileEdit, ProfilePage } from "./components/client";
+import { Login, Register } from "./components/auth";
 
-// Import all admin pages
+// Import all admin pages - Updated Nov 22
 import { Dashboard } from "./components/admin/dashboard/Dashboard";
 import { UserManagement } from "./components/admin/users/UserManagement";
 import { MenuItemManagement } from "./components/admin/menu/MenuItemManagement";
@@ -56,7 +57,6 @@ function App() {
         >
           <Route index element={<ClientHome />} />
           <Route path="menu" element={<Menu />} />
-          <Route path="favorites" element={<Favorites />} />
           <Route path="cart" element={<CartPage />} />
           <Route path="checkout" element={<Checkout />} />
           <Route path="orders" element={<OrderHistory />} />

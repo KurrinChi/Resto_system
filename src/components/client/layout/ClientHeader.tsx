@@ -11,6 +11,8 @@ import { Button } from '../../common/Button';
 export const ClientHeader: React.FC = () => {
   const [search, setSearch] = React.useState('');
   const [address, setAddress] = React.useState('');
+  const [userName, setUserName] = React.useState('Guest');
+  const [userAvatar, setUserAvatar] = React.useState<string | undefined>(undefined);
   const [showAddressTooltip, setShowAddressTooltip] = React.useState(false);
   const [showCartPanel, setShowCartPanel] = React.useState(false);
   const [orderType, setOrderType] = React.useState<'delivery' | 'pickup'>(() => {
@@ -20,9 +22,11 @@ export const ClientHeader: React.FC = () => {
   const location = useLocation();
   const { items, updateQty, removeItem, total, count } = useCart();
 
-  // Check if current page should hide search field
-  const hideSearchOnPages = ['/client/favorites', '/client/profile', '/client/orders'];
+  // Visibility rules
+  const hideSearchOnPages = ['/client/profile', '/client/orders', '/client/profile/edit', '/client/checkout'];
   const shouldHideSearch = hideSearchOnPages.includes(location.pathname);
+  const shouldHideAddress = ['/client/profile/edit', '/client/checkout'].includes(location.pathname);
+  const shouldHideCart = ['/client/profile/edit', '/client/checkout'].includes(location.pathname);
 
   // Update localStorage when order type changes
   React.useEffect(() => {
@@ -35,19 +39,65 @@ export const ClientHeader: React.FC = () => {
     window.dispatchEvent(new CustomEvent('searchQuery', { detail: value }));
   };
 
-  // Load address from localStorage on mount
+  // Load address from logged-in user or localStorage on mount
   React.useEffect(() => {
-    const savedAddress = localStorage.getItem('userAddress');
-    setAddress(savedAddress || 'Select delivery address');
+    const loadFromDB = async () => {
+      try {
+        const userRaw = sessionStorage.getItem('rs_current_user') || localStorage.getItem('rs_current_user');
+        if (!userRaw) {
+          setAddress('Select delivery address');
+          return;
+        }
+        const currentUser = JSON.parse(userRaw);
+        if (!currentUser.id) {
+          setAddress('Select delivery address');
+          return;
+        }
+        const res = await fetch(`http://localhost:8000/api/auth/user/${currentUser.id}/`);
+        if (res.ok) {
+          const data = await res.json();
+          setAddress(data.address || 'Select delivery address');
+          setUserName(data.fullName || currentUser.fullName || 'Guest');
+          setUserAvatar(data.avatar || currentUser.avatar || undefined);
+          // update session/local user object with fresh data
+          const updated = { ...currentUser, address: data.address, fullName: data.fullName, avatar: data.avatar };
+          sessionStorage.setItem('rs_current_user', JSON.stringify(updated));
+          localStorage.setItem('rs_current_user', JSON.stringify(updated));
+        } else {
+          // fallback to existing stored address
+          setAddress(currentUser.address || 'Select delivery address');
+          setUserName(currentUser.fullName || 'Guest');
+          setUserAvatar(currentUser.avatar || undefined);
+        }
+      } catch {
+        setAddress('Select delivery address');
+        setUserName('Guest');
+        setUserAvatar(undefined);
+      }
+    };
+    loadFromDB();
   }, []);
 
   // Listen for address updates
   React.useEffect(() => {
-    const handleAddressUpdate = () => {
-      const savedAddress = localStorage.getItem('userAddress');
-      setAddress(savedAddress || 'Select delivery address');
+    const handleAddressUpdate = async () => {
+      const userRaw = sessionStorage.getItem('rs_current_user') || localStorage.getItem('rs_current_user');
+      if (!userRaw) return;
+      const currentUser = JSON.parse(userRaw);
+      if (!currentUser.id) return;
+      try {
+        const res = await fetch(`http://localhost:8000/api/auth/user/${currentUser.id}/`);
+        if (res.ok) {
+          const data = await res.json();
+          setAddress(data.address || 'Select delivery address');
+          setUserName(data.fullName || currentUser.fullName || 'Guest');
+          setUserAvatar(data.avatar || currentUser.avatar || undefined);
+          const updated = { ...currentUser, address: data.address, fullName: data.fullName, avatar: data.avatar };
+          sessionStorage.setItem('rs_current_user', JSON.stringify(updated));
+          localStorage.setItem('rs_current_user', JSON.stringify(updated));
+        }
+      } catch {/* ignore */}
     };
-    
     window.addEventListener('addressUpdated', handleAddressUpdate);
     return () => window.removeEventListener('addressUpdated', handleAddressUpdate);
   }, []);
@@ -79,40 +129,40 @@ export const ClientHeader: React.FC = () => {
           />
         </div>
 
-        {/* Center - Address */}
-        <div className="flex-1 flex justify-center min-w-0">
-          <div 
-            className="flex items-center gap-2 cursor-pointer transition-colors group relative max-w-md min-w-0" 
-            onClick={() => window.dispatchEvent(new Event('openMapModal'))}
-            onMouseEnter={() => setShowAddressTooltip(true)}
-            onMouseLeave={() => setShowAddressTooltip(false)}
-          >
-            <MapPin className="w-4 h-4 flex-shrink-0 group-hover:text-red-600 transition-colors" style={{ color: THEME.colors.primary.DEFAULT }} />
-            <span className="text-xs truncate group-hover:text-red-600 transition-colors" style={{ color: THEME.colors.text.primary }}>
-              {address}
-            </span>
-            
-            {/* Tooltip */}
-            {showAddressTooltip && (
-              <div 
-                className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-3 rounded-lg shadow-lg z-50 min-w-[250px] max-w-[350px]"
-                style={{ 
-                  backgroundColor: THEME.colors.background.secondary,
-                  border: `1px solid ${THEME.colors.border.dark}`,
-                  color: THEME.colors.text.primary
-                }}
-              >
-                <div className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: THEME.colors.primary.DEFAULT }} />
-                  <div>
-                    <p className="text-xs font-medium mb-1" style={{ color: THEME.colors.text.secondary }}>Delivery Address</p>
-                    <p className="text-sm break-words" style={{ color: THEME.colors.text.tertiary }}>{address}</p>
+        {/* Center - Address (hidden on edit & checkout) */}
+        {!shouldHideAddress && (
+          <div className="flex-1 flex justify-center min-w-0">
+            <div 
+              className="flex items-center gap-2 cursor-pointer transition-colors group relative max-w-md min-w-0" 
+              onClick={() => window.dispatchEvent(new Event('openMapModal'))}
+              onMouseEnter={() => setShowAddressTooltip(true)}
+              onMouseLeave={() => setShowAddressTooltip(false)}
+            >
+              <MapPin className="w-4 h-4 flex-shrink-0 group-hover:text-red-600 transition-colors" style={{ color: THEME.colors.primary.DEFAULT }} />
+              <span className="text-xs truncate group-hover:text-red-600 transition-colors" style={{ color: THEME.colors.text.primary }}>
+                {address}
+              </span>
+              {showAddressTooltip && (
+                <div 
+                  className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-3 rounded-lg shadow-lg z-50 min-w-[250px] max-w-[350px]"
+                  style={{ 
+                    backgroundColor: THEME.colors.background.secondary,
+                    border: `1px solid ${THEME.colors.border.dark}`,
+                    color: THEME.colors.text.primary
+                  }}
+                >
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: THEME.colors.primary.DEFAULT }} />
+                    <div>
+                      <p className="text-xs font-medium mb-1" style={{ color: THEME.colors.text.secondary }}>Delivery Address</p>
+                      <p className="text-sm break-words" style={{ color: THEME.colors.text.tertiary }}>{address}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Right - Search, Cart, Avatar */}
         <div className="flex items-center gap-3 flex-shrink-0">
@@ -132,10 +182,10 @@ export const ClientHeader: React.FC = () => {
             </div>
           )}
 
-          <CartIndicator onClick={() => setShowCartPanel(true)} />
+          {!shouldHideCart && <CartIndicator onClick={() => setShowCartPanel(true)} />}
 
           <div className="hidden sm:flex items-center gap-2">
-            <Avatar size="sm" name="Guest" />
+            <Avatar size="sm" name={userName} src={userAvatar} />
           </div>
         </div>
       </div>

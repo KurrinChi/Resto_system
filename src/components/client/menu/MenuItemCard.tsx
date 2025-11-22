@@ -1,7 +1,6 @@
 import React from 'react';
 import { Card } from '../../common/Card';
 import { Button } from '../../common/Button';
-import { Heart } from 'lucide-react';
 import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
 
 const PLACEHOLDER_IMG = new URL('../../../assets/placeholder.png', import.meta.url).href;
@@ -20,24 +19,17 @@ type Item = {
 type MenuItemCardProps = {
   item: Item;
   onAddToOrder?: (item: { id: number | string; name: string; price: number }) => void;
-  onToggleFavorite?: (itemId: number | string) => void;
-  isFavorite?: boolean;
   index?: number;
 };
 
-export const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onAddToOrder, onToggleFavorite, isFavorite = false, index = 0 }) => {
+export const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onAddToOrder, index = 0 }) => {
   const handleAdd = () => {
     if (onAddToOrder) {
       onAddToOrder({ id: item.id, name: item.name, price: item.price });
     }
   };
 
-  const handleToggleFavorite = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onToggleFavorite) {
-      onToggleFavorite(item.id);
-    }
-  };
+  
 
   return (
     <Card 
@@ -63,23 +55,7 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onAddToOrder, 
               target.src = PLACEHOLDER_IMG;
             }}
           />
-          {/* Heart Icon */}
-          {onToggleFavorite && (
-            <button
-              onClick={handleToggleFavorite}
-              className="absolute top-2 right-2 p-1.5 rounded-full transition-all"
-              style={{ 
-                backgroundColor: 'rgba(255,255,255,0.9)',
-                border: isFavorite ? '2px solid #ef4444' : '2px solid transparent'
-              }}
-            >
-              <Heart 
-                className="w-4 h-4 transition-colors" 
-                style={{ color: isFavorite ? '#ef4444' : '#9ca3af' }}
-                fill={isFavorite ? '#ef4444' : 'none'}
-              />
-            </button>
-          )}
+          
           {item.isBestSeller && (
             <span className="absolute top-2 left-2 px-2 py-1 rounded text-xs font-semibold" style={{ backgroundColor: THEME.colors.primary.DEFAULT, color: 'white' }}>
               Best Seller
