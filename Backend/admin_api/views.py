@@ -374,6 +374,11 @@ def list_menu_items(request):
         # Convert to dict
         items_data = []
         for item in items:
+            # Build full image URL if image exists
+            image_url = None
+            if item.image:
+                image_url = request.build_absolute_uri(item.image.url)
+            
             items_data.append({
                 'id': item.id,
                 'name': item.name,
@@ -384,7 +389,7 @@ def list_menu_items(request):
                 'available': item.available,
                 'preparation_time': item.preparation_time,
                 'ingredients': item.ingredients,
-                'image_url': item.image_url,
+                'image_url': image_url or item.image_url,
                 'created_at': item.created_at.isoformat() if item.created_at else None,
             })
         
@@ -406,18 +411,56 @@ def create_menu_item(request):
         data = request.data
         menu_id = get_next_menu_id()
         
+        # Defensive parsing for numeric fields
+        try:
+            price = float(data.get('price', 0)) if data.get('price') else 0.0
+        except (ValueError, TypeError):
+            price = 0.0
+        
+        try:
+            prep_time = int(data.get('preparation_time', 15)) if data.get('preparation_time') else 15
+        except (ValueError, TypeError):
+            prep_time = 15
+        
+        # Parse boolean field from FormData (comes as string "true"/"false")
+        available_str = data.get('available', 'true')
+        if isinstance(available_str, str):
+            available = available_str.lower() in ['true', '1', 'yes']
+        else:
+            available = bool(available_str)
+        
+        # Parse ingredients JSON if provided as string
+        ingredients = []
+        if data.get('ingredients'):
+            try:
+                if isinstance(data['ingredients'], str):
+                    ingredients = eval(data['ingredients']) if data['ingredients'] else []
+                else:
+                    ingredients = data['ingredients']
+            except:
+                ingredients = []
+        
+        # Handle image file if provided
+        image_file = request.FILES.get('image') if request.FILES else None
+        
         menu_item = MenuItem.objects.create(
             id=menu_id,
             name=data.get('name', ''),
             menuName=data.get('menuName', data.get('name', '')),
             description=data.get('description', ''),
-            price=data.get('price', 0),
+            price=price,
             category=data.get('category', 'Other'),
-            available=data.get('available', True),
-            preparation_time=data.get('preparation_time', 15),
-            ingredients=data.get('ingredients', []),
+            available=available,
+            preparation_time=prep_time,
+            ingredients=ingredients,
+            image=image_file,
             image_url=data.get('image_url', ''),
         )
+        
+        # Build full image URL if image exists
+        image_url = None
+        if menu_item.image:
+            image_url = request.build_absolute_uri(menu_item.image.url)
         
         return Response({
             'success': True,
@@ -426,6 +469,7 @@ def create_menu_item(request):
                 'id': menu_item.id,
                 'name': menu_item.name,
                 'price': float(menu_item.price),
+                'image_url': image_url or menu_item.image_url,
             }
         }, status=status.HTTP_201_CREATED)
     except Exception as e:
@@ -442,6 +486,11 @@ def menu_item_detail(request, item_id):
         item = MenuItem.objects.get(id=item_id)
         
         if request.method == 'GET':
+            # Build full image URL if image exists
+            image_url = None
+            if item.image:
+                image_url = request.build_absolute_uri(item.image.url)
+            
             return Response({
                 'success': True,
                 'data': {
@@ -454,7 +503,7 @@ def menu_item_detail(request, item_id):
                     'available': item.available,
                     'preparation_time': item.preparation_time,
                     'ingredients': item.ingredients,
-                    'image_url': item.image_url,
+                    'image_url': image_url or item.image_url,
                 }
             })
         
@@ -468,27 +517,68 @@ def menu_item_detail(request, item_id):
                 item.menuName = data['menuName']
             if 'description' in data:
                 item.description = data['description']
+            
             if 'price' in data:
-                item.price = data['price']
+                try:
+                    item.price = float(data['price']) if data['price'] else 0.0
+                except (ValueError, TypeError):
+                    item.price = 0.0
+            
             if 'category' in data:
                 item.category = data['category']
+            
             if 'available' in data:
-                item.available = data['available']
+                available_str = data['available']
+                if isinstance(available_str, str):
+                    item.available = available_str.lower() in ['true', '1', 'yes']
+                else:
+                    item.available = bool(available_str)
+            
             if 'preparation_time' in data:
-                item.preparation_time = data['preparation_time']
+                try:
+                    item.preparation_time = int(data['preparation_time']) if data['preparation_time'] else 15
+                except (ValueError, TypeError):
+                    item.preparation_time = 15
+            
             if 'ingredients' in data:
-                item.ingredients = data['ingredients']
+                try:
+                    if isinstance(data['ingredients'], str):
+                        item.ingredients = eval(data['ingredients']) if data['ingredients'] else []
+                    else:
+                        item.ingredients = data['ingredients']
+                except:
+                    item.ingredients = []
+            
+            # Handle image file upload
+            if 'image' in request.FILES:
+                # Delete old image if it exists
+                if item.image:
+                    item.image.delete()
+                item.image = request.FILES['image']
+            
             if 'image_url' in data:
                 item.image_url = data['image_url']
             
             item.save()
             
+            # Build full image URL if image exists
+            image_url = None
+            if item.image:
+                image_url = request.build_absolute_uri(item.image.url)
+            
             return Response({
                 'success': True,
-                'message': 'Menu item updated successfully'
+                'message': 'Menu item updated successfully',
+                'data': {
+                    'id': item.id,
+                    'image_url': image_url or item.image_url,
+                }
             })
         
         elif request.method == 'DELETE':
+            # Delete image file if it exists
+            if item.image:
+                item.image.delete()
             item.delete()
             return Response({
                 'success': True,
