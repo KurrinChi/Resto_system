@@ -79,6 +79,18 @@ export const Profile: React.FC = () => {
       });
 
       if (response.success) {
+        // Update session storage with new profile data
+        const currentUser = JSON.parse(sessionStorage.getItem('rs_current_user') || '{}');
+        const updatedUser = {
+          ...currentUser,
+          name,
+          email,
+          phoneNumber: phone,
+          avatar,
+        };
+        sessionStorage.setItem('rs_current_user', JSON.stringify(updatedUser));
+        localStorage.setItem('rs_current_user', JSON.stringify(updatedUser));
+        
         alert("Profile updated successfully!");
         setHasChanges(false);
         await loadProfile(); // Reload to get updated data
@@ -217,14 +229,14 @@ export const Profile: React.FC = () => {
                 }}
               >
                 <Camera className="w-5 h-5" />
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarUpload}
-                />
               </label>
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
             </div>
             <div className="flex-1 text-center md:text-left">
               <h3
@@ -239,14 +251,24 @@ export const Profile: React.FC = () => {
               >
                 {role}
               </p>
-              <label htmlFor="avatar-upload">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  icon={<Upload className="w-4 h-4" />}
+              <label htmlFor="avatar-upload" className="inline-block cursor-pointer">
+                <span
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors"
+                  style={{
+                    backgroundColor: THEME.colors.background.tertiary,
+                    borderColor: THEME.colors.border.DEFAULT,
+                    color: THEME.colors.text.primary,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = THEME.colors.background.hover;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = THEME.colors.background.tertiary;
+                  }}
                 >
+                  <Upload className="w-4 h-4" />
                   Upload New Photo
-                </Button>
+                </span>
               </label>
               <p
                 className="text-xs mt-2"

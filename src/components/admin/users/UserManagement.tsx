@@ -35,8 +35,8 @@ export const UserManagement: React.FC = () => {
             id: user.id,
             name: user.fullName || user.full_name || user.username || user.email?.split('@')[0] || 'Unknown',
             email: user.email || '',
-            role: (user.role || 'customer').toLowerCase(),
-            status: (user.status || 'active').toLowerCase(),
+            role: (user.role || 'CUSTOMER') as any,
+            status: (user.status || 'ACTIVE') as any,
             phone: user.phoneNumber || user.phone || '',
             dateJoined: user.createdAt || user.created_at || new Date().toISOString().split('T')[0],
             avatar: user.avatar || user.avatar_url || ''
@@ -176,10 +176,9 @@ export const UserManagement: React.FC = () => {
               }}
             >
               <option value="all">All Roles</option>
-              <option value="admin">Admin</option>
-              <option value="manager">Manager</option>
-              <option value="staff">Staff</option>
-              <option value="customer">Customer</option>
+              <option value="ADMIN">Admin</option>
+              <option value="STAFF">Staff</option>
+              <option value="CUSTOMER">Customer</option>
             </select>
           </div>
 
@@ -196,9 +195,9 @@ export const UserManagement: React.FC = () => {
               }}
             >
               <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="suspended">Suspended</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+              <option value="SUSPENDED">Suspended</option>
             </select>
           </div>
         </div>

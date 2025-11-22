@@ -228,8 +228,8 @@ export const Sidebar: React.FC = () => {
                 <span
                   className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full"
                   style={{
-                    backgroundColor: THEME.colors.primary.DEFAULT,
-                    color: THEME.colors.text.primary,
+                    backgroundColor: '#ef4444',
+                    color: 'white',
                   }}
                 >
                   {badges[item.badgeKey]}

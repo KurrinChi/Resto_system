@@ -21,7 +21,7 @@ export const UserModal: React.FC<UserModalProps> = ({
   const [formData, setFormData] = useState<Partial<User>>({
     name: "",
     email: "",
-    role: "customer",
+    role: "CUSTOMER",
     status: "active",
     phone: "",
   });
@@ -33,7 +33,7 @@ export const UserModal: React.FC<UserModalProps> = ({
       setFormData({
         name: "",
         email: "",
-        role: "customer",
+        role: "CUSTOMER",
         status: "active",
         phone: "",
       });
@@ -112,10 +112,9 @@ export const UserModal: React.FC<UserModalProps> = ({
             }}
             required
           >
-            <option value="customer">Customer</option>
-            <option value="staff">Staff</option>
-            <option value="manager">Manager</option>
-            <option value="admin">Admin</option>
+            <option value="CUSTOMER">Customer</option>
+            <option value="STAFF">Staff</option>
+            <option value="ADMIN">Admin</option>
           </select>
         </div>
 
@@ -140,9 +139,9 @@ export const UserModal: React.FC<UserModalProps> = ({
             }}
             required
           >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="suspended">Suspended</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+            <option value="SUSPENDED">Suspended</option>
           </select>
         </div>
       </form>
