@@ -1,68 +1,67 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Upload, Trash2 } from 'lucide-react';
-import { THEME } from '../../../constants/theme';
 
 interface MenuItemModalProps {
-  item?: any;
-  onSave: (data: any, imageFile?: File) => Promise<void>;
-  onClose: () => void;
+    item?: any;
+    onSave: (data: any, imageFile?: File) => Promise<void>;
+    onClose: () => void;
 }
 
 export const MenuItemModal: React.FC<MenuItemModalProps> = ({ item, onSave, onClose }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: '',
-    category: 'Starters',
-    available: true,
-    preparation_time: '15',
-    ingredients: [] as string[],
-  });
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [ingredientInput, setIngredientInput] = useState('');
-  const [loading, setLoading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [formData, setFormData] = useState({
+        name: '',
+        description: '',
+        price: '',
+        category: 'Starters',
+        available: true,
+        preparation_time: '15',
+        ingredients: [] as string[],
+    });
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [ingredientInput, setIngredientInput] = useState('');
+    const [loading, setLoading] = useState(false);
 
-  const categories = ['Starters', 'Soups', 'Mains', 'Grills', 'Specialties', 'Pasta', 'Sides', 'Desserts', 'Drinks', 'Cocktails'];
+    const categories = ['Starters', 'Soups', 'Mains', 'Grills', 'Specialties', 'Pasta', 'Sides', 'Desserts', 'Drinks', 'Cocktails'];
 
-  // Initialize form with existing item data
-  useEffect(() => {
-    if (item) {
-      setFormData({
-        name: item.name || '',
-        description: item.description || '',
-        price: String(item.price || ''),
-        category: item.category || 'Starters',
-        available: item.available !== false,
-        preparation_time: String(item.preparation_time || '15'),
-        ingredients: item.ingredients || [],
-      });
-      if (item.image_url) {
-        setImagePreview(item.image_url);
-      }
-    }
-  }, [item]);
+    // Initialize form with existing item data
+    useEffect(() => {
+        if (item) {
+            setFormData({
+                name: item.name || '',
+                description: item.description || '',
+                price: String(item.price || ''),
+                category: item.category || 'Starters',
+                available: item.available !== false,
+                preparation_time: String(item.preparation_time || '15'),
+                ingredients: item.ingredients || [],
+            });
+            if (item.image_url) {
+                setImagePreview(item.image_url);
+            }
+        }
+    }, [item]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target as any;
-    if (type === 'checkbox') {
-      setFormData(prev => ({
-        ...prev,
-        [name]: (e.target as HTMLInputElement).checked
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-  };
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { name, value, type } = e.target as any;
+        if (type === 'checkbox') {
+            setFormData(prev => ({
+                ...prev,
+                [name]: (e.target as HTMLInputElement).checked
+            }));
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                [name]: value
+            }));
+        }
+    };
 
-  const handleImageDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.currentTarget.classList.add('border-blue-500', 'bg-blue-50');
-  };
+    const handleImageDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.currentTarget.classList.add('border-blue-500', 'bg-blue-50');
+    };
 
   const handleImageDragLeave = (e: React.DragEvent) => {
     e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
@@ -119,7 +118,7 @@ export const MenuItemModal: React.FC<MenuItemModalProps> = ({ item, onSave, onCl
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     // Validation
     if (!formData.name.trim()) {
       alert('Please enter item name');
@@ -146,11 +145,11 @@ export const MenuItemModal: React.FC<MenuItemModalProps> = ({ item, onSave, onCl
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" style={{ backgroundColor: THEME.colors.background.secondary }}>
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6" style={{ borderBottom: `1px solid ${THEME.colors.border.DEFAULT}`, backgroundColor: THEME.colors.background.tertiary }}>
-          <h2 className="text-xl font-bold" style={{ color: THEME.colors.text.primary }}>{item ? 'Edit Menu Item' : 'Add Menu Item'}</h2>
-          <button onClick={onClose} style={{ color: THEME.colors.text.secondary }} className="hover:opacity-70">
+        <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white">
+          <h2 className="text-xl font-bold">{item ? 'Edit Menu Item' : 'Add Menu Item'}</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -159,13 +158,12 @@ export const MenuItemModal: React.FC<MenuItemModalProps> = ({ item, onSave, onCl
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Image Upload */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: THEME.colors.text.primary }}>Item Image</label>
+            <label className="block text-sm font-medium mb-2">Item Image</label>
             <div
               onDragOver={handleImageDragOver}
               onDragLeave={handleImageDragLeave}
               onDrop={handleImageDrop}
-              className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors"
-              style={{ borderColor: THEME.colors.border.DEFAULT, backgroundColor: THEME.colors.background.tertiary }}
+              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer transition-colors hover:border-blue-500"
               onClick={() => fileInputRef.current?.click()}
             >
               {imagePreview ? (
@@ -177,16 +175,15 @@ export const MenuItemModal: React.FC<MenuItemModalProps> = ({ item, onSave, onCl
                       e.stopPropagation();
                       handleRemoveImage();
                     }}
-                    className="absolute top-0 right-0 text-white p-1 rounded-full hover:opacity-80"
-                    style={{ backgroundColor: THEME.colors.status.error }}
+                    className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               ) : (
                 <div>
-                  <Upload className="w-8 h-8 mx-auto mb-2" style={{ color: THEME.colors.text.tertiary }} />
-                  <p className="text-sm" style={{ color: THEME.colors.text.secondary }}>Drag image here or click to select</p>
+                  <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-600">Drag image here or click to select</p>
                 </div>
               )}
               <input
@@ -201,27 +198,25 @@ export const MenuItemModal: React.FC<MenuItemModalProps> = ({ item, onSave, onCl
 
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: THEME.colors.text.primary }}>Item Name</label>
+            <label className="block text-sm font-medium mb-2">Item Name</label>
             <input
               type="text"
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              className="w-full rounded-lg px-3 py-2 outline-none focus:ring-2"
+              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="e.g., Butter Chicken"
-              style={{ backgroundColor: THEME.colors.background.tertiary, color: THEME.colors.text.primary, borderColor: THEME.colors.border.DEFAULT, border: `1px solid ${THEME.colors.border.DEFAULT}` }}
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: THEME.colors.text.primary }}>Description</label>
+            <label className="block text-sm font-medium mb-2">Description</label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleInputChange}
-              className="w-full rounded-lg px-3 py-2 outline-none focus:ring-2 resize-none"
-              style={{ backgroundColor: THEME.colors.background.tertiary, color: THEME.colors.text.primary, borderColor: THEME.colors.border.DEFAULT, border: `1px solid ${THEME.colors.border.DEFAULT}` }}
+              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               rows={3}
               placeholder="Item description..."
             />
@@ -230,46 +225,43 @@ export const MenuItemModal: React.FC<MenuItemModalProps> = ({ item, onSave, onCl
           {/* Price and Prep Time */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: THEME.colors.text.primary }}>Price (₹)</label>
+              <label className="block text-sm font-medium mb-2">Price (₹)</label>
               <input
                 type="number"
                 name="price"
                 value={formData.price}
                 onChange={handleInputChange}
-                className="w-full rounded-lg px-3 py-2 outline-none focus:ring-2"
+                className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="0.00"
                 step="0.01"
                 min="0"
-                style={{ backgroundColor: THEME.colors.background.tertiary, color: THEME.colors.text.primary, borderColor: THEME.colors.border.DEFAULT, border: `1px solid ${THEME.colors.border.DEFAULT}` }}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: THEME.colors.text.primary }}>Prep Time (mins)</label>
+              <label className="block text-sm font-medium mb-2">Prep Time (mins)</label>
               <input
                 type="number"
                 name="preparation_time"
                 value={formData.preparation_time}
                 onChange={handleInputChange}
-                className="w-full rounded-lg px-3 py-2 outline-none focus:ring-2"
+                className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="15"
                 min="0"
-                style={{ backgroundColor: THEME.colors.background.tertiary, color: THEME.colors.text.primary, borderColor: THEME.colors.border.DEFAULT, border: `1px solid ${THEME.colors.border.DEFAULT}` }}
               />
             </div>
           </div>
 
           {/* Category */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: THEME.colors.text.primary }}>Category</label>
+            <label className="block text-sm font-medium mb-2">Category</label>
             <select
               name="category"
               value={formData.category}
               onChange={handleInputChange}
-              className="w-full rounded-lg px-3 py-2 outline-none focus:ring-2"
-              style={{ backgroundColor: THEME.colors.background.tertiary, color: THEME.colors.text.primary, borderColor: THEME.colors.border.DEFAULT, border: `1px solid ${THEME.colors.border.DEFAULT}` }}
+              className="w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
             >
               {categories.map(cat => (
-                <option key={cat} value={cat} style={{ backgroundColor: THEME.colors.background.secondary, color: THEME.colors.text.primary }}>{cat}</option>
+                <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
           </div>
@@ -283,39 +275,37 @@ export const MenuItemModal: React.FC<MenuItemModalProps> = ({ item, onSave, onCl
               onChange={handleInputChange}
               className="w-4 h-4"
             />
-            <span className="text-sm font-medium" style={{ color: THEME.colors.text.primary }}>Available for sale</span>
+            <span className="text-sm font-medium">Available for sale</span>
           </label>
 
           {/* Ingredients */}
           <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: THEME.colors.text.primary }}>Ingredients</label>
+            <label className="block text-sm font-medium mb-2">Ingredients</label>
             <div className="flex gap-2 mb-3">
               <input
                 type="text"
                 value={ingredientInput}
                 onChange={(e) => setIngredientInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddIngredient())}
-                className="flex-1 rounded-lg px-3 py-2 outline-none focus:ring-2"
+                className="flex-1 border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Add ingredient..."
-                style={{ backgroundColor: THEME.colors.background.tertiary, color: THEME.colors.text.primary, borderColor: THEME.colors.border.DEFAULT, border: `1px solid ${THEME.colors.border.DEFAULT}` }}
               />
               <button
                 type="button"
                 onClick={handleAddIngredient}
-                className="text-white px-3 py-2 rounded-lg hover:opacity-90"
-                style={{ backgroundColor: THEME.colors.primary.DEFAULT }}
+                className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700"
               >
                 Add
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
               {formData.ingredients.map((ing, idx) => (
-                <div key={idx} className="px-3 py-1 rounded-full flex items-center gap-2" style={{ backgroundColor: THEME.colors.primary.dark, color: THEME.colors.text.primary }}>
+                <div key={idx} className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full flex items-center gap-2">
                   <span>{ing}</span>
                   <button
                     type="button"
                     onClick={() => handleRemoveIngredient(idx)}
-                    className="hover:opacity-70"
+                    className="hover:text-blue-900"
                   >
                     ×
                   </button>
@@ -325,20 +315,18 @@ export const MenuItemModal: React.FC<MenuItemModalProps> = ({ item, onSave, onCl
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4" style={{ borderTop: `1px solid ${THEME.colors.border.DEFAULT}` }}>
+          <div className="flex gap-3 pt-4 border-t">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 rounded-lg hover:opacity-80 transition-opacity"
-              style={{ backgroundColor: THEME.colors.background.tertiary, color: THEME.colors.text.primary, border: `1px solid ${THEME.colors.border.DEFAULT}` }}
+              className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
-              style={{ backgroundColor: THEME.colors.primary.DEFAULT }}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
               {loading ? 'Saving...' : item ? 'Update Item' : 'Add Item'}
             </button>

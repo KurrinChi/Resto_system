@@ -3,6 +3,7 @@ import { menuApi } from '../../../services/apiservice';
 import { MenuItemModal } from './MenuItemModal';
 import { MenuItemTable } from './MenuItemTable';
 import { Plus, Search } from 'lucide-react';
+import { THEME } from '../../../constants/theme';
 
 interface MenuItem {
   id: string;
@@ -127,16 +128,17 @@ export const MenuItemManagement: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6 p-6" style={{ backgroundColor: THEME.colors.background.primary }}>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-800">Menu Management</h1>
+      <div className="flex items-center justify-between p-6 rounded-lg" style={{ backgroundColor: THEME.colors.background.secondary, borderLeft: `4px solid ${THEME.colors.primary.DEFAULT}` }}>
+        <h1 className="text-3xl font-bold" style={{ color: THEME.colors.text.primary }}>Menu Management</h1>
         <button
           onClick={() => {
             setEditingItem(null);
             setIsModalOpen(true);
           }}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
+          className="flex items-center gap-2 text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity"
+          style={{ backgroundColor: THEME.colors.primary.DEFAULT }}
         >
           <Plus className="w-5 h-5" />
           Add Menu Item
@@ -145,23 +147,24 @@ export const MenuItemManagement: React.FC = () => {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+        <div className="px-4 py-3 rounded border-l-4" style={{ backgroundColor: THEME.colors.background.secondary, borderColor: THEME.colors.status.error, color: THEME.colors.status.error }}>
           {error}
           <button onClick={() => setError(null)} className="ml-2 font-bold">×</button>
         </div>
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 space-y-4">
+      <div className="rounded-lg p-4 space-y-4" style={{ backgroundColor: THEME.colors.background.secondary }}>
         {/* Search */}
-        <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
-          <Search className="w-5 h-5 text-gray-400" />
+        <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ backgroundColor: THEME.colors.background.tertiary, borderBottom: `1px solid ${THEME.colors.border.DEFAULT}` }}>
+          <Search className="w-5 h-5" style={{ color: THEME.colors.text.tertiary }} />
           <input
             type="text"
             placeholder="Search menu items..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 bg-transparent outline-none"
+            className="flex-1 outline-none"
+            style={{ backgroundColor: 'transparent', color: THEME.colors.text.primary }}
           />
         </div>
 
@@ -171,11 +174,12 @@ export const MenuItemManagement: React.FC = () => {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                selectedCategory === category
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+              className="px-3 py-1 rounded-full text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: selectedCategory === category ? THEME.colors.primary.DEFAULT : THEME.colors.background.tertiary,
+                color: selectedCategory === category ? '#f5e6e6' : THEME.colors.text.secondary,
+                border: selectedCategory === category ? 'none' : `1px solid ${THEME.colors.border.DEFAULT}`
+              }}
             >
               {category}
             </button>
@@ -188,15 +192,15 @@ export const MenuItemManagement: React.FC = () => {
             type="checkbox"
             checked={showAvailableOnly}
             onChange={(e) => setShowAvailableOnly(e.target.checked)}
-            className="w-4 h-4"
+            className="w-4 h-4 rounded"
           />
-          <span className="text-sm font-medium">Show available items only</span>
+          <span className="text-sm font-medium" style={{ color: THEME.colors.text.primary }}>Show available items only</span>
         </label>
       </div>
 
       {/* Table */}
       {loading ? (
-        <div className="text-center py-8">Loading...</div>
+        <div className="text-center py-8" style={{ color: THEME.colors.text.tertiary }}>Loading...</div>
       ) : (
         <MenuItemTable
           items={filteredItems}
