@@ -1,0 +1,12 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useCart } from './CartContext';
+import { Card } from '../../common/Card';
+import { Button } from '../../common/Button';
+import { CLIENT_THEME as THEME } from '../../../constants/clientTheme';
+import { useNavigate } from 'react-router-dom';
+export const CartPage = () => {
+    const { items, updateQty, removeItem, total } = useCart();
+    const navigate = useNavigate();
+    return (_jsxs("div", { className: "space-y-6", children: [_jsx("h2", { className: "text-2xl font-semibold", style: { color: THEME.colors.text.primary }, children: "Your Cart" }), _jsxs("div", { className: "space-y-3", children: [items.length === 0 && _jsx(Card, { padding: "md", style: { backgroundColor: THEME.colors.background.tertiary, borderColor: THEME.colors.border.DEFAULT, color: THEME.colors.text.primary }, children: _jsx("p", { style: { color: THEME.colors.text.tertiary }, children: "Your cart is empty." }) }), items.map((it) => (_jsx(Card, { padding: "md", style: { backgroundColor: THEME.colors.background.tertiary, borderColor: THEME.colors.border.DEFAULT, color: THEME.colors.text.primary }, children: _jsxs("div", { className: "flex items-center justify-between", children: [_jsxs("div", { children: [_jsx("div", { className: "text-lg font-medium", style: { color: THEME.colors.text.primary }, children: it.name }), _jsxs("div", { className: "text-sm", style: { color: THEME.colors.text.tertiary }, children: ["$", it.price.toFixed(2)] })] }), _jsxs("div", { className: "flex items-center gap-2", children: [_jsx("input", { type: "number", min: 1, value: it.qty, onChange: (e) => updateQty(it.id, Number(e.target.value) || 1), className: "w-20 px-2 py-1 rounded-md bg-transparent border", style: { borderColor: THEME.colors.border.DEFAULT, color: THEME.colors.text.primary } }), _jsx(Button, { variant: "ghost", onClick: () => removeItem(it.id), children: "Remove" })] })] }) }, it.id)))] }), _jsxs("div", { className: "flex items-center justify-between", children: [_jsxs("div", { children: [_jsx("div", { className: "text-sm", style: { color: THEME.colors.text.tertiary }, children: "Total" }), _jsxs("div", { className: "text-2xl font-bold", style: { color: THEME.colors.text.primary }, children: ["$", total.toFixed(2)] })] }), _jsx("div", { children: _jsx(Button, { onClick: () => navigate('/client/checkout'), disabled: items.length === 0, children: "Proceed to Checkout" }) })] })] }));
+};
+export default CartPage;
