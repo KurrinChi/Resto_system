@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { menuApi } from '../../../services/apiservice';
 import { MenuItemModal } from './MenuItemModal';
 import { MenuItemTable } from './MenuItemTable';
-import { Button } from '../../common/Button';
-import { Search } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 
 interface MenuItem {
   id: string;
@@ -128,16 +127,23 @@ export const MenuItemManagement: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-6 p-6 min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-800">Menu Management</h1>
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+      <div className="flex items-center justify-between bg-white p-6 rounded-lg shadow-sm">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">Menu Management</h1>
+          <p className="text-gray-500 mt-1 text-sm">Manage your restaurant menu items</p>
+        </div>
+        <button
+          onClick={() => {
+            setEditingItem(null);
+            setIsModalOpen(true);
+          }}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
         >
-          + Add Menu Item
-        </Button>
+          <Plus className="w-5 h-5" />
+          Add Menu Item
+        </button>
       </div>
 
       {/* Error Message */}
@@ -149,7 +155,7 @@ export const MenuItemManagement: React.FC = () => {
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 space-y-4">
+      <div className="bg-white rounded-lg shadow-sm p-6 space-y-4">
         {/* Search */}
         <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
           <Search className="w-5 h-5 text-gray-400" />
@@ -192,15 +198,23 @@ export const MenuItemManagement: React.FC = () => {
       </div>
 
       {/* Table */}
-      {loading ? (
-        <div className="text-center py-8">Loading...</div>
-      ) : (
-        <MenuItemTable
-          items={filteredItems}
-          onEdit={handleEdit}
-          onDelete={handleDeleteMenuItem}
-        />
-      )}
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="text-center py-12 text-gray-500">
+            <p>Loading menu items...</p>
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <p>No menu items found. Try adjusting your filters or add a new item.</p>
+          </div>
+        ) : (
+          <MenuItemTable
+            items={filteredItems}
+            onEdit={handleEdit}
+            onDelete={handleDeleteMenuItem}
+          />
+        )}
+      </div>
 
       {/* Modal */}
       {isModalOpen && (

@@ -6,31 +6,50 @@ import { Minus, Plus, Trash2 } from 'lucide-react';
 import { Button } from '../../common/Button';
 import { useCart } from '../cart/CartContext';
 import { Toast } from '../../common/Toast';
+import { menuApi } from '../../../services/apiservice';
 
-const sampleMenu = [
-  { id: 1, name: 'Burger Deluxe', price: 8.99, desc: 'Juicy beef patty with cheese', category: 'Burgers', isBestSeller: true, isNewOffer: false },
-  { id: 2, name: 'Classic Pizza', price: 12.5, desc: 'Tomato, mozzarella, basil', category: 'Pizza', isBestSeller: false, isNewOffer: true },
-  { id: 3, name: 'Caesar Salad', price: 7.2, desc: 'Fresh romaine, parmesan', category: 'Salads', isBestSeller: false, isNewOffer: false },
-  { id: 4, name: 'Pasta Carbonara', price: 11.3, desc: 'Creamy sauce, pancetta', category: 'Pasta', isBestSeller: true, isNewOffer: false },
-  { id: 5, name: 'Veggie Wrap', price: 6.5, desc: 'Grilled veg, hummus', category: 'Wraps', isBestSeller: false, isNewOffer: true },
-  { id: 6, name: 'Chicken Wings', price: 9.99, desc: 'Spicy buffalo wings', category: 'Burgers', isBestSeller: true, isNewOffer: false },
-  { id: 7, name: 'Margherita Pizza', price: 10.99, desc: 'Fresh mozzarella and basil', category: 'Pizza', isBestSeller: false, isNewOffer: false },
-  { id: 8, name: 'Greek Salad', price: 8.5, desc: 'Feta, olives, cucumber', category: 'Salads', isBestSeller: false, isNewOffer: true },
-];
+interface MenuItem {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+  category: string;
+  available: boolean;
+  image_url?: string;
+  preparation_time?: number;
+}
 
-const categories = ['All', 'Burgers', 'Pizza', 'Salads', 'Pasta', 'Wraps'];
+const categories = ['All', 'Starters', 'Soups', 'Mains', 'Grills', 'Specialties', 'Pasta', 'Sides', 'Desserts', 'Drinks', 'Cocktails'];
 
 export const Menu: React.FC = () => {
   const navigate = useNavigate();
   const { addItem, items, updateQty, removeItem } = useCart();
+  const [menuItems, setMenuItems] = React.useState<MenuItem[]>([]);
   const [filter, setFilter] = React.useState('All');
-  const [priceRange, setPriceRange] = React.useState<[number, number]>([0, 1000]);
-  const [showDiscounts, setShowDiscounts] = React.useState(false);
-  const [showBestSellers, setShowBestSellers] = React.useState(false);
-  const [showNewOffers, setShowNewOffers] = React.useState(false);
+  const [priceRange, setPriceRange] = React.useState<[number, number]>([0, 10000]);
   const [orderType, setOrderType] = React.useState<'delivery' | 'pickup'>('delivery');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  // Fetch menu items from backend
+  React.useEffect(() => {
+    const fetchMenuItems = async () => {
+      try {
+        setLoading(true);
+        const response = await menuApi.getAll();
+        if (response.success && Array.isArray(response.data)) {
+          setMenuItems(response.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch menu items:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMenuItems();
+  }, []);
 
   // Add keyframe animations on mount
   React.useEffect(() => {
@@ -87,14 +106,14 @@ export const Menu: React.FC = () => {
   }, []);
 
   // Filter items based on all criteria
-  let filteredItems = filter === 'All' ? sampleMenu : sampleMenu.filter((m) => m.category === filter);
+  let filteredItems = filter === 'All' ? menuItems : menuItems.filter((m) => m.category === filter);
   
-  // Apply search query filter (search in name, description, category)
+  // Apply search query filter
   if (searchQuery.trim()) {
     const query = searchQuery.toLowerCase();
     filteredItems = filteredItems.filter(item => 
       item.name.toLowerCase().includes(query) ||
-      item.desc.toLowerCase().includes(query) ||
+      (item.description && item.description.toLowerCase().includes(query)) ||
       item.category.toLowerCase().includes(query)
     );
   }
@@ -102,15 +121,10 @@ export const Menu: React.FC = () => {
   // Apply price range filter
   filteredItems = filteredItems.filter(item => item.price >= priceRange[0] && item.price <= priceRange[1]);
   
-  // Apply checkbox filters
-  if (showBestSellers) {
-    filteredItems = filteredItems.filter(item => item.isBestSeller);
-  }
-  if (showNewOffers) {
-    filteredItems = filteredItems.filter(item => item.isNewOffer);
-  }
+  // Apply availability filter
+  filteredItems = filteredItems.filter(item => item.available);
 
-  const handleAddToCart = (item: { id: number | string; name: string; price: number; desc?: string; image?: string }) => {
+  const handleAddToCart = (item: MenuItem) => {
     addItem({
       id: item.id,
       name: item.name,
@@ -146,10 +160,19 @@ export const Menu: React.FC = () => {
   // Function to get count of items per category
   const getCategoryCount = (category: string) => {
     if (category === 'All') {
-      return sampleMenu.length;
+      return menuItems.length;
     }
-    return sampleMenu.filter(item => item.category === category).length;
+    return menuItems.filter(item => item.category === category).length;
   };
+
+  // Return early if still loading
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p style={{ color: THEME.colors.text.secondary }}>Loading menu...</p>
+      </div>
+    );
+  }
 
   const subtotal = items.reduce((sum: number, item) => sum + (item.price * item.qty), 0);
   const smallOrderFee = subtotal < 109 ? 20 : 0;
@@ -184,45 +207,6 @@ export const Menu: React.FC = () => {
                 <span>₱{priceRange[1]}</span>
               </div>
             </div>
-          </div>
-
-          {/* Discounts */}
-          <div className="mb-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showDiscounts}
-                onChange={(e) => setShowDiscounts(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <span className="text-sm" style={{ color: THEME.colors.text.primary }}>Discounts</span>
-            </label>
-          </div>
-
-          {/* Best Sellers */}
-          <div className="mb-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showBestSellers}
-                onChange={(e) => setShowBestSellers(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <span className="text-sm" style={{ color: THEME.colors.text.primary }}>Best Sellers</span>
-            </label>
-          </div>
-
-          {/* New Offers */}
-          <div className="mb-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showNewOffers}
-                onChange={(e) => setShowNewOffers(e.target.checked)}
-                className="w-4 h-4"
-              />
-              <span className="text-sm" style={{ color: THEME.colors.text.primary }}>New Offers</span>
-            </label>
           </div>
         </div>
       </div>
@@ -276,10 +260,8 @@ export const Menu: React.FC = () => {
                 variant="primary"
                 onClick={() => {
                   setFilter('All');
-                  setPriceRange([0, 1000]);
-                  setShowDiscounts(false);
-                  setShowBestSellers(false);
-                  setShowNewOffers(false);
+                  setPriceRange([0, 10000]);
+                  setSearchQuery('');
                   window.dispatchEvent(new CustomEvent('searchQuery', { detail: '' }));
                 }}
                 style={{
