@@ -178,15 +178,18 @@ export const settingsApi = {
 // ==================== Profile API ====================
 export const profileApi = {
     get: async () => {
-        const response = await api.get('/profile');
+        const user = JSON.parse(sessionStorage.getItem('rs_current_user') || '{}');
+        const response = await api.get('/profile', { params: { userId: user.id, email: user.email } });
         return response.data;
     },
     update: async (profileData) => {
-        const response = await api.put('/profile', profileData);
+        const user = JSON.parse(sessionStorage.getItem('rs_current_user') || '{}');
+        const response = await api.put('/profile', { ...profileData, userId: user.id, userEmail: user.email });
         return response.data;
     },
     changePassword: async (passwordData) => {
-        const response = await api.put('/profile/password', passwordData);
+        const user = JSON.parse(sessionStorage.getItem('rs_current_user') || '{}');
+        const response = await api.put('/profile/password', { ...passwordData, userId: user.id, userEmail: user.email });
         return response.data;
     },
 };

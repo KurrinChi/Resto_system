@@ -6,13 +6,16 @@ import { BrowserRouter } from 'react-router-dom';
 import { AdminProvider } from './contexts/AdminContext';
 import App from './App';
 import './index.css';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <AdminProvider>
-        <App />
-      </AdminProvider>
-    </BrowserRouter>
-  </React.StrictMode>,
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AdminProvider>
+          <App />
+        </AdminProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
+  </React.StrictMode>
 );

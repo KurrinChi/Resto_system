@@ -66,6 +66,17 @@ export const Profile = () => {
                 avatar,
             });
             if (response.success) {
+                // Update session storage with new profile data
+                const currentUser = JSON.parse(sessionStorage.getItem('rs_current_user') || '{}');
+                const updatedUser = {
+                    ...currentUser,
+                    name,
+                    email,
+                    phoneNumber: phone,
+                    avatar,
+                };
+                sessionStorage.setItem('rs_current_user', JSON.stringify(updatedUser));
+                localStorage.setItem('rs_current_user', JSON.stringify(updatedUser));
                 alert("Profile updated successfully!");
                 setHasChanges(false);
                 await loadProfile(); // Reload to get updated data
@@ -142,7 +153,7 @@ export const Profile = () => {
     return (_jsxs("div", { className: "space-y-6 h-full overflow-y-auto pb-6", children: [_jsxs("div", { className: "flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4", children: [_jsxs("div", { children: [_jsx("h2", { className: "text-2xl font-bold", style: { color: THEME.colors.text.primary }, children: "My Profile" }), _jsx("p", { className: "mt-1", style: { color: THEME.colors.text.secondary }, children: "Manage your personal information and account settings" })] }), hasChanges && (_jsx(Button, { onClick: handleSave, icon: _jsx(Save, { className: "w-5 h-5" }), children: "Save Changes" }))] }), _jsx("div", { className: "rounded-2xl border overflow-hidden", style: {
                     backgroundColor: THEME.colors.background.secondary,
                     borderColor: THEME.colors.border.DEFAULT,
-                }, children: _jsx("div", { className: "p-6", children: _jsxs("div", { className: "flex flex-col md:flex-row items-center md:items-start gap-6", children: [_jsxs("div", { className: "relative", children: [_jsx(Avatar, { src: avatar, name: name, size: "xl" }), _jsxs("label", { htmlFor: "avatar-upload", className: "absolute bottom-0 right-0 p-2 rounded-full border-2 cursor-pointer transition-colors", style: {
+                }, children: _jsx("div", { className: "p-6", children: _jsxs("div", { className: "flex flex-col md:flex-row items-center md:items-start gap-6", children: [_jsxs("div", { className: "relative", children: [_jsx(Avatar, { src: avatar, name: name, size: "xl" }), _jsx("label", { htmlFor: "avatar-upload", className: "absolute bottom-0 right-0 p-2 rounded-full border-2 cursor-pointer transition-colors", style: {
                                             backgroundColor: THEME.colors.background.secondary,
                                             borderColor: THEME.colors.border.DEFAULT,
                                             color: THEME.colors.text.primary,
@@ -152,7 +163,15 @@ export const Profile = () => {
                                         }, onMouseLeave: (e) => {
                                             e.currentTarget.style.backgroundColor =
                                                 THEME.colors.background.secondary;
-                                        }, children: [_jsx(Camera, { className: "w-5 h-5" }), _jsx("input", { id: "avatar-upload", type: "file", accept: "image/*", className: "hidden", onChange: handleAvatarUpload })] })] }), _jsxs("div", { className: "flex-1 text-center md:text-left", children: [_jsx("h3", { className: "text-xl font-semibold", style: { color: THEME.colors.text.primary }, children: name }), _jsx("p", { className: "text-sm mt-1 mb-4", style: { color: THEME.colors.text.tertiary }, children: role }), _jsx("label", { htmlFor: "avatar-upload", children: _jsx(Button, { variant: "secondary", size: "sm", icon: _jsx(Upload, { className: "w-4 h-4" }), children: "Upload New Photo" }) }), _jsx("p", { className: "text-xs mt-2", style: { color: THEME.colors.text.muted }, children: "JPG, PNG or GIF. Max size 2MB" })] })] }) }) }), _jsxs("div", { className: "rounded-2xl border overflow-hidden", style: {
+                                        }, children: _jsx(Camera, { className: "w-5 h-5" }) }), _jsx("input", { id: "avatar-upload", type: "file", accept: "image/*", className: "hidden", onChange: handleAvatarUpload })] }), _jsxs("div", { className: "flex-1 text-center md:text-left", children: [_jsx("h3", { className: "text-xl font-semibold", style: { color: THEME.colors.text.primary }, children: name }), _jsx("p", { className: "text-sm mt-1 mb-4", style: { color: THEME.colors.text.tertiary }, children: role }), _jsx("label", { htmlFor: "avatar-upload", className: "inline-block cursor-pointer", children: _jsxs("span", { className: "inline-flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors", style: {
+                                                backgroundColor: THEME.colors.background.tertiary,
+                                                borderColor: THEME.colors.border.DEFAULT,
+                                                color: THEME.colors.text.primary,
+                                            }, onMouseEnter: (e) => {
+                                                e.currentTarget.style.backgroundColor = THEME.colors.background.hover;
+                                            }, onMouseLeave: (e) => {
+                                                e.currentTarget.style.backgroundColor = THEME.colors.background.tertiary;
+                                            }, children: [_jsx(Upload, { className: "w-4 h-4" }), "Upload New Photo"] }) }), _jsx("p", { className: "text-xs mt-2", style: { color: THEME.colors.text.muted }, children: "JPG, PNG or GIF. Max size 2MB" })] })] }) }) }), _jsxs("div", { className: "rounded-2xl border overflow-hidden", style: {
                     backgroundColor: THEME.colors.background.secondary,
                     borderColor: THEME.colors.border.DEFAULT,
                 }, children: [_jsx("div", { className: "px-6 py-4 border-b", style: { borderColor: THEME.colors.border.DEFAULT }, children: _jsx("h3", { className: "text-lg font-semibold", style: { color: THEME.colors.text.primary }, children: "Personal Information" }) }), _jsxs("div", { className: "p-6 space-y-4", children: [_jsx(Input, { label: "Full Name", placeholder: "Enter your full name", value: name, onChange: (e) => {

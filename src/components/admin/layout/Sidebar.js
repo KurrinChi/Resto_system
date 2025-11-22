@@ -107,8 +107,8 @@ export const Sidebar = () => {
                                                 transitionDelay: "0.15s",
                                                 opacity: isExpanded ? 1 : 0,
                                             }, children: badges[item.badgeKey] }))] })), !isExpanded && item.badgeKey && badges[item.badgeKey] > 0 && (_jsx("span", { className: "absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full", style: {
-                                        backgroundColor: THEME.colors.primary.DEFAULT,
-                                        color: THEME.colors.text.primary,
+                                        backgroundColor: '#ef4444',
+                                        color: 'white',
                                     }, children: badges[item.badgeKey] }))] }, item.path))) }), _jsxs("div", { className: "p-3 relative", style: { borderTop: `1px solid ${THEME.colors.border.dark}` }, children: [showProfileMenu && isExpanded && (_jsxs("div", { className: "absolute bottom-full left-3 right-3 mb-2 rounded-lg border overflow-hidden", style: {
                                     backgroundColor: THEME.colors.background.secondary,
                                     borderColor: THEME.colors.border.DEFAULT,
