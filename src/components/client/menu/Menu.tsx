@@ -39,7 +39,12 @@ export const Menu: React.FC = () => {
         setLoading(true);
         const response = await menuApi.getAll();
         if (response.success && Array.isArray(response.data)) {
-          setMenuItems(response.data);
+          const mappedItems = response.data.map((item: any) => ({
+            ...item,
+            image: item.image_url || item.image,
+            desc: item.description || item.desc
+          }));
+          setMenuItems(mappedItems);
         }
       } catch (err) {
         console.error('Failed to fetch menu items:', err);
