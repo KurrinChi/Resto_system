@@ -37,7 +37,7 @@ export const Login: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/admin/auth/login', {
+      const response = await fetch('http://localhost:8000/api/auth/login/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -57,34 +57,41 @@ export const Login: React.FC = () => {
       }
 
       if (data.success) {
-        // Build session user object from response (with fallbacks)
-        const sessionUser = {
+        // Clear any previous session to avoid stale user data
+        try {
+          sessionStorage.removeItem('rs_current_user');
+          localStorage.removeItem('rs_current_user');
+        } catch {/* ignore */}
+
+        // Normalize role for consistent routing
+        const normalizedRole = (data.role || 'Customer').toString().trim().toUpperCase();
+
+        // Build session user object from response
+        const sessionUserObj = {
           id: data.id || data.userId || `user_${Date.now()}`,
-          name: data.name || data.fullName || data.username || user,
+          name: data.fullName || data.name || data.username || user,
+          fullName: data.fullName || data.name || data.username || user,
           email: data.email || user,
-          role: data.role || 'Customer',
+          role: data.role || 'Customer', // Store original role
           phoneNumber: data.phoneNumber || data.phone || '',
           avatar: data.avatar || ''
         };
+
+        // Persist new session user
         try {
-          sessionStorage.setItem('rs_current_user', JSON.stringify(sessionUser));
-          // Keep localStorage for legacy components that still read it (optional)
-          localStorage.setItem('rs_current_user', JSON.stringify(sessionUser));
-          
-          // Dispatch custom event to notify AdminContext
-          window.dispatchEvent(new Event('rs_user_updated'));
+          const serialized = JSON.stringify(sessionUserObj);
+          sessionStorage.setItem('rs_current_user', serialized);
+          localStorage.setItem('rs_current_user', serialized);
+          setSessionUser(sessionUserObj); // Update local state
         } catch (storageErr) {
           console.warn('Failed to persist session user:', storageErr);
         }
 
-        // Route based on role (case-insensitive check)
-        const roleUpper = sessionUser.role.toUpperCase();
-        if (roleUpper === 'ADMIN') {
-          navigate('/admin');
-        } else if (roleUpper === 'CUSTOMER') {
-          navigate('/client');
+        // Route based on normalized role - ONLY ADMIN goes to admin page
+        if (normalizedRole === 'ADMIN') {
+          navigate('/admin/dashboard');
         } else {
-          setError('Invalid user role');
+          navigate('/client');
         }
       } else {
         setError('Login failed. Please check your credentials.');
@@ -148,7 +155,8 @@ export const Login: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    if (sessionUser.role === 'Admin') navigate('/admin'); else navigate('/client');
+                    const normalized = (sessionUser.role || 'Customer').toString().trim().toUpperCase();
+                    if (normalized === 'ADMIN') navigate('/admin/dashboard'); else navigate('/client');
                   }}
                   className="px-4 py-2 rounded-lg font-semibold"
                   style={{ backgroundColor: THEME.colors.primary.DEFAULT, color: '#fff' }}

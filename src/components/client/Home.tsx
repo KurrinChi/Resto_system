@@ -390,21 +390,21 @@ export const Home: React.FC = () => {
             </div>
           </div>
         </div>
-
-      {/* Promotions Section - Horizontal Scroll */}
+                  
+      {/* Best Sellers Section - Horizontal Scroll */}
       <div className="rounded-3xl p-6" style={{ backgroundColor: '#1a1a1a' }}>
         <div className="flex items-center justify-between mb-4 ml-4 mr-4">
-          <h2 className="text-2xl font-semibold" style={{ color: '#ffffff' }}>Get % OFF on these meals</h2>
+          <h2 className="text-2xl font-semibold" style={{ color: '#ffffff' }}>Best Sellers</h2>
         </div>
         
-        {filteredPromotions.length === 0 ? (
+        {filteredBestSellers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="rounded-full p-4 mb-4" style={{ backgroundColor: '#2a2a2a' }}>
               <Search className="w-12 h-12" style={{ color: '#808080' }} />
             </div>
-            <h3 className="text-lg font-semibold mb-2" style={{ color: '#ffffff' }}>No promotions found</h3>
+            <h3 className="text-lg font-semibold mb-2" style={{ color: '#ffffff' }}>No best sellers found</h3>
             <p className="text-sm text-center max-w-md" style={{ color: '#a0a0a0' }}>
-              We couldn't find any promotions matching your search. Try a different keyword.
+              We couldn't find any best sellers matching your search. Try a different keyword.
             </p>
           </div>
         ) : (
@@ -424,9 +424,9 @@ export const Home: React.FC = () => {
               className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth flex-1"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              {filteredPromotions.map((promo, index) => (
+              {filteredBestSellers.map((item, index) => (
             <div
-              key={promo.id}
+              key={item.id}
               className="flex-shrink-0 rounded-xl overflow-hidden relative card-hover-zoom"
               style={{ 
                 width: '300px',
@@ -439,33 +439,30 @@ export const Home: React.FC = () => {
             >
               <div className="relative">
                 <img 
-                  src={promo.image} 
-                  alt={promo.name} 
+                  src={item.image} 
+                  alt={item.name} 
                   className="w-full h-40 object-cover"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.src = PLACEHOLDER_IMG;
                   }}
                 />
-                <div className="absolute top-2 right-2 px-2 py-1 rounded-lg text-xs font-semibold bg-red-600 text-white">
-                  {promo.discount}% OFF
-                </div>
-                <div className="absolute top-2 left-2 px-2 py-1 rounded-lg text-xs font-semibold" style={{ backgroundColor: THEME.colors.primary.DEFAULT, color: 'white' }}>
-                  {promo.badge}
+                <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold" style={{ backgroundColor: 'rgba(0,0,0,0.7)', color: '#fbbf24' }}>
+                  <span className="text-yellow-500">★</span>
+                  {item.rating}
                 </div>
               </div>
               <div className="p-4">
-                <h3 className="text-lg font-semibold mb-1" style={{ color: '#ffffff' }}>{promo.name}</h3>
-                <p className="text-xs mb-3" style={{ color: '#a0a0a0' }}>{promo.description}</p>
+                <h3 className="text-lg font-semibold mb-1" style={{ color: '#ffffff' }}>{item.name}</h3>
+                <p className="text-xs mb-3" style={{ color: '#a0a0a0' }}>{item.description}</p>
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-xl font-bold" style={{ color: '#fbbf24' }}>₱{promo.price}</span>
-                    <span className="text-sm ml-2 line-through" style={{ color: '#808080' }}>₱{promo.originalPrice}</span>
+                    <span className="text-xl font-bold" style={{ color: '#fbbf24' }}>₱{item.price}</span>
                   </div>
                   <Button 
                     variant="primary" 
                     className="text-xs px-3 py-1.5"
-                    onClick={() => handleAddToCart({ id: promo.id, name: promo.name, price: promo.price })}
+                    onClick={() => handleAddToCart({ id: item.id, name: item.name, price: item.price })}
                   >
                     <ShoppingCart className="w-4 h-4" />
                   </Button>
@@ -483,73 +480,6 @@ export const Home: React.FC = () => {
             >
               <ChevronRight className="w-4 h-4" style={{ color: '#ffffff' }} />
             </button>
-          </div>
-        )}
-      </div>
-
-      {/* Best Sellers Section */}
-      <div className="rounded-3xl p-6" style={{ backgroundColor: THEME.colors.background.secondary }}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-semibold" style={{ color: THEME.colors.text.primary }}>Best Sellers</h2>
-        </div>
-        {filteredBestSellers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="rounded-full p-4 mb-4" style={{ backgroundColor: THEME.colors.background.tertiary }}>
-              <Search className="w-12 h-12" style={{ color: THEME.colors.text.tertiary }} />
-            </div>
-            <h3 className="text-lg font-semibold mb-2" style={{ color: THEME.colors.text.primary }}>No best sellers found</h3>
-            <p className="text-sm text-center max-w-md" style={{ color: THEME.colors.text.tertiary }}>
-              We couldn't find any best sellers matching your search. Try different keywords.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {filteredBestSellers.map((item, index) => (
-            <Card 
-              key={item.id} 
-              className="relative overflow-hidden card-hover-zoom" 
-              padding="none"
-              style={{ 
-                backgroundColor: THEME.colors.background.tertiary, 
-                borderColor: THEME.colors.border.DEFAULT,
-                animation: `fadeInUp 0.5s ease-in-out forwards`,
-                animationDelay: `${index * 100}ms`,
-                opacity: 0
-              }}
-            >
-              <div className="relative">
-                <img 
-                  src={item.image} 
-                  alt={item.name} 
-                  className="w-full h-40 object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = PLACEHOLDER_IMG;
-                  }}
-                />
-                
-              </div>
-              <div className="p-4">
-                <h3 className="text-base font-semibold mb-1" style={{ color: THEME.colors.text.primary }}>{item.name}</h3>
-                <p className="text-xs mb-2" style={{ color: THEME.colors.text.tertiary }}>{item.description}</p>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-lg font-bold" style={{ color: THEME.colors.primary.DEFAULT }}>₱{item.price}</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-yellow-500 text-sm">★</span>
-                    <span className="text-xs font-medium" style={{ color: THEME.colors.text.secondary }}>{item.rating}</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleAddToCart({ id: item.id, name: item.name, price: item.price })}
-                  className="w-full py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                  style={{ backgroundColor: THEME.colors.primary.light, color: '#FFFFFF' }}
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  Add to Cart
-                </button>
-              </div>
-              </Card>
-            ))}
           </div>
         )}
       </div>
@@ -645,4 +575,3 @@ export const Home: React.FC = () => {
 };
 
 export default Home;
-
