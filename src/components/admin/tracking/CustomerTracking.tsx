@@ -10,6 +10,7 @@ import { ordersApi } from "../../../services/apiservice";
 export const CustomerTracking: React.FC = () => {
   const [trackingData, setTrackingData] = useState<CustomerTrackingType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTrackingData();
@@ -20,24 +21,26 @@ export const CustomerTracking: React.FC = () => {
 
   const fetchTrackingData = async () => {
     try {
+      setError(null);
       const response = await ordersApi.getAll();
       if (response.success) {
         // Transform orders to tracking data
         const tracking = response.data
-          .filter((order: any) => ['received', 'preparing', 'ready'].includes(order.orderStatus))
+          .filter((order: any) => ['received', 'preparing', 'ready', 'delivered'].includes(order.orderStatus))
           .map((order: any) => ({
             orderId: order.id,
             orderNumber: order.id,
-            customerName: order.guestInfo?.name || order.userId || 'Customer',
-            status: order.orderStatus === 'ready' ? 'out_for_delivery' : order.orderStatus,
+            customerName: order.fullName || 'Customer',
+            status: order.orderStatus,
             estimatedDelivery: order.createdAt,
-            location: order.deliveryAddress?.coordinates || undefined,
-            driver: order.assignedDriver || 'Unassigned'
+            location: order.address || undefined,
+            driver: 'Unassigned'
           }));
         setTrackingData(tracking);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching tracking data:', err);
+      setError(err.message || 'Failed to load tracking data');
     } finally {
       setLoading(false);
     }
@@ -47,8 +50,14 @@ export const CustomerTracking: React.FC = () => {
     useState<CustomerTrackingType | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  const handleViewLocation = (tracking: CustomerTrackingType) => {
-    setSelectedTracking(tracking);
+  const handleUpdateStatus = async (tracking: CustomerTrackingType) => {
+    try {
+      await ordersApi.updateStatus(tracking.orderId, tracking.status);
+      fetchTrackingData();
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Failed to update order status');
+    }
   };
 
   const filteredTracking = trackingData.filter((tracking) => {
@@ -71,18 +80,35 @@ export const CustomerTracking: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full space-y-4">
-      {/* Page Header */}
-      <div className="flex-shrink-0">
-        <h2
-          className="text-2xl font-bold"
-          style={{ color: THEME.colors.text.primary }}
-        >
-          Customer Tracking
-        </h2>
-        <p className="mt-1" style={{ color: THEME.colors.text.secondary }}>
-          Real-time order tracking and delivery management
-        </p>
-      </div>
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center h-full">
+          <p style={{ color: THEME.colors.text.secondary }}>Loading tracking data...</p>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="flex items-center justify-center h-full">
+          <p style={{ color: '#ef4444' }}>Error: {error}</p>
+        </div>
+      )}
+
+      {/* Content */}
+      {!loading && !error && (
+        <>
+          {/* Page Header */}
+          <div className="flex-shrink-0">
+            <h2
+              className="text-2xl font-bold"
+              style={{ color: THEME.colors.text.primary }}
+            >
+              Customer Tracking
+            </h2>
+            <p className="mt-1" style={{ color: THEME.colors.text.secondary }}>
+              Real-time order tracking and delivery management
+            </p>
+          </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-shrink-0">
@@ -226,9 +252,11 @@ export const CustomerTracking: React.FC = () => {
       >
         <TrackingTable
           trackingData={filteredTracking}
-          onViewLocation={handleViewLocation}
+          onUpdateStatus={handleUpdateStatus}
         />
       </div>
+        </>
+      )}
     </div>
   );
 };
