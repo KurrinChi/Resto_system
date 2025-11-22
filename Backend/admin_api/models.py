@@ -73,6 +73,7 @@ class MenuItem(models.Model):
     available = models.BooleanField(default=True)
     preparation_time = models.IntegerField(default=15)  # in minutes
     ingredients = models.JSONField(default=list, blank=True)
+    image = models.ImageField(upload_to='menu_items/', blank=True, null=True)
     image_url = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

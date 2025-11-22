@@ -175,7 +175,7 @@ export const TrackingTable: React.FC<TrackingTableProps> = ({
                     }
                   )}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-left">
                   <select
                     value={tracking.status}
                     onChange={(e) => onUpdateStatus({...tracking, status: e.target.value})}

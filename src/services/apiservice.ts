@@ -58,13 +58,51 @@ export const menuApi = {
     const response = await api.get(`/menu/${menuId}`);
     return response.data;
   },
-  create: async (menuData: any) => {
-    const response = await api.post('/menu/create', menuData);
-    return response.data;
+  create: async (menuData: any, imageFile?: File) => {
+    if (imageFile) {
+      const formData = new FormData();
+      Object.keys(menuData).forEach(key => {
+        if (Array.isArray(menuData[key])) {
+          formData.append(key, JSON.stringify(menuData[key]));
+        } else if (typeof menuData[key] === 'boolean') {
+          formData.append(key, String(menuData[key]));
+        } else {
+          formData.append(key, String(menuData[key]));
+        }
+      });
+      formData.append('image', imageFile);
+
+      const response = await api.post('/menu/create', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return response.data;
+    } else {
+      const response = await api.post('/menu/create', menuData);
+      return response.data;
+    }
   },
-  update: async (menuId: string, menuData: any) => {
-    const response = await api.put(`/menu/${menuId}`, menuData);
-    return response.data;
+  update: async (menuId: string, menuData: any, imageFile?: File) => {
+    if (imageFile) {
+      const formData = new FormData();
+      Object.keys(menuData).forEach(key => {
+        if (Array.isArray(menuData[key])) {
+          formData.append(key, JSON.stringify(menuData[key]));
+        } else if (typeof menuData[key] === 'boolean') {
+          formData.append(key, String(menuData[key]));
+        } else {
+          formData.append(key, String(menuData[key]));
+        }
+      });
+      formData.append('image', imageFile);
+
+      const response = await api.put(`/menu/${menuId}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return response.data;
+    } else {
+      const response = await api.put(`/menu/${menuId}`, menuData);
+      return response.data;
+    }
   },
   delete: async (menuId: string) => {
     const response = await api.delete(`/menu/${menuId}`);
